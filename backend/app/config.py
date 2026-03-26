@@ -11,10 +11,6 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str = "postgresql+asyncpg://user:pass@localhost/tiscord"
 
-    # Temporary bootstrap flag: create tables via SQLAlchemy metadata on startup.
-    # Use only for initial deploy, then turn it off.
-    AUTO_CREATE_SCHEMA: bool = False
-
     JWT_SECRET: str = "changeme-in-production"
     JWT_ACCESS_EXPIRE_MINUTES: int = 60
     JWT_REFRESH_EXPIRE_DAYS: int = 30

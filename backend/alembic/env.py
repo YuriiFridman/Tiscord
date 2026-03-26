@@ -21,6 +21,9 @@ import app.models.role  # noqa: F401
 import app.models.invite  # noqa: F401
 import app.models.moderation  # noqa: F401
 import app.models.voice  # noqa: F401
+import app.models.social  # noqa: F401
+import app.models.webhook  # noqa: F401
+import app.models.notification  # noqa: F401
 
 config = context.config
 

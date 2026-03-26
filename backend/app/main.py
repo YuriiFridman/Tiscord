@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import uuid
 from contextlib import asynccontextmanager
 
@@ -9,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select
 
 from app.config import settings
-from app.database import AsyncSessionLocal, Base, engine
+from app.database import AsyncSessionLocal
 from app.models.dm import DmParticipant
 from app.models.guild import GuildMember
 from app.models.user import User
@@ -35,9 +36,20 @@ import app.models.notification  # noqa: F401
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    if settings.AUTO_CREATE_SCHEMA:
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
+    # Run Alembic migrations on every startup to keep the schema up to date.
+    # We run the synchronous alembic command in a thread to avoid blocking the
+    # event loop and to allow alembic's own asyncio.run() call inside env.py
+    # to work correctly (it needs a thread without a running event loop).
+    def _run_migrations() -> None:
+        import os
+        from alembic import command
+        from alembic.config import Config as AlembicConfig
+
+        ini_path = os.path.join(os.path.dirname(__file__), "..", "alembic.ini")
+        cfg = AlembicConfig(ini_path)
+        command.upgrade(cfg, "head")
+
+    await asyncio.get_event_loop().run_in_executor(None, _run_migrations)
 
     # Create upload directory if using local storage
     if settings.STORAGE_BACKEND == "local":
