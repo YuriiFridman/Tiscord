@@ -160,7 +160,7 @@ async def get_pinned_messages(channel_id: uuid.UUID, db: DbDep, current_user: Cu
     await get_channel_or_404(db, channel_id)
     result = await db.execute(
         select(Message)
-        .where(Message.channel_id == channel_id, Message.is_pinned == True)  # noqa: E712
+        .where(Message.channel_id == channel_id, Message.is_pinned.is_(True))
         .options(selectinload(Message.attachments), selectinload(Message.reactions), selectinload(Message.author))
         .order_by(Message.created_at.desc())
     )

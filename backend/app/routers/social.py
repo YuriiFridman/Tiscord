@@ -95,7 +95,7 @@ async def respond_to_friend_request(request_id: uuid.UUID, body: dict, db: DbDep
     else:
         await db.delete(req)
         await db.commit()
-        return {"status": "rejected"}
+        return FriendRequestOut.model_validate(req)
 
     await db.commit()
     result = await db.execute(
