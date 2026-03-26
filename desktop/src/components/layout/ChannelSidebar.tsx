@@ -263,10 +263,20 @@ function ChannelRow({ channel, isActive, onClick }: { channel: Channel; isActive
       )}
       style={{ color: isActive ? 'var(--channel-hover)' : 'var(--channel-text)' }}
     >
-      {channel.type === 'voice' ? <VoiceIcon /> : channel.type === 'stage' ? <StageIcon /> : channel.type === 'forum' ? <ForumIcon /> : channel.type === 'announcement' ? <AnnouncementIcon /> : <HashIcon />}
+      {getChannelIcon(channel.type)}
       <span className="truncate">{channel.name}</span>
     </button>
   );
+}
+
+function getChannelIcon(type: string) {
+  switch (type) {
+    case 'voice': return <VoiceIcon />;
+    case 'stage': return <StageIcon />;
+    case 'forum': return <ForumIcon />;
+    case 'announcement': return <AnnouncementIcon />;
+    default: return <HashIcon />;
+  }
 }
 
 function StageIcon() {

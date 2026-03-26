@@ -50,7 +50,8 @@ function renderMarkdown(text: string): React.ReactNode {
 }
 
 function renderInline(text: string, keyPrefix: string): React.ReactNode[] {
-  // Pattern order matters: bold, italic, strikethrough, code, url
+  // Capture groups: (1,2) bold **text**/__ __, (3,4) italic *text*/_text_,
+  // (5,6) strikethrough ~~text~~, (7) inline `code`, (8,9) http/https URL
   const tokenRegex =
     /(\*\*|__)(.+?)\1|(\*|_)(.+?)\3|(~~)(.+?)\5|(`[^`]+`)|((https?:\/\/)[^\s]+)/g;
 
