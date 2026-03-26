@@ -2,9 +2,12 @@
 
 Tiscord — Discord-подобное приложение, состоящее из:
 - **Backend**: FastAPI (Python 3.11+), WebSocket `/ws`, REST API с префиксом `/api/v1`.
-- **Desktop/Frontend**: Vite + React + TypeScript (папка `desktop`). (Также есть скрипты для Tauri-сборки.)
+- **Desktop/Frontend**: Vite + React + TypeScript (папка `desktop`). Также есть скрипты для **Tauri** (desktop build).
 
-> Ниже — максимально подробная инструкция: как установить зависимости, запустить локально, собрать фронтенд, а также варианты деплоя на хостинг (VPS/Docker).
+Этот README максимально подробно описывает:
+- запуск **локально** (в т.ч. **Windows**),
+- деплой на **Railway** (backend + PostgreSQL),
+- сборку и публикацию фронтенда.
 
 ---
 
@@ -12,52 +15,56 @@ Tiscord — Discord-подобное приложение, состоящее и
 
 - [1. Требования](#1-требования)
 - [2. Структура репозитория](#2-структура-репозитория)
-- [3. Быстрый старт (локально за 10 минут)](#3-быстрый-старт-локально-за-10-минут)
-- [4. Настройка переменных окружения (.env)](#4-настройка-переменных-окружения-env)
-- [5. Локальный запуск Backend (FastAPI)](#5-локальный-запуск-backend-fastapi)
-- [6. Локальный запуск Desktop/Frontend (Vite)](#6-локальный-запуск-desktopfrontend-vite)
-- [7. Проверка, что всё работает](#7-проверка-что-всё-работает)
-- [8. Сборка Frontend для продакшена](#8-сборка-frontend-для-продакшена)
-- [9. Деплой на VPS (Linux) без Docker: systemd + reverse proxy](#9-деплой-на-vps-linux-без-docker-systemd--reverse-proxy)
-- [10. Деплой на VPS (Linux) через Docker](#10-деплой-на-vps-linux-через-docker)
-- [11. Настройка CORS и доменов](#11-настройка-cors-и-доменов)
-- [12. Хранилище файлов (local vs s3)](#12-хранилище-файлов-local-vs-s3)
-- [13. WebSocket и голос/звонки (STUN/TURN)](#13-websocket-и-голосзвонки-stunturn)
-- [14. Миграции БД (alembic)](#14-миграции-бд-alembic)
-- [15. Troubleshooting (частые ошибки)](#15-troubleshooting-частые-ошибки)
+- [3. Локальный запуск (быстрый старт)](#3-локальный-запуск-быстрый-старт)
+- [4. Переменные окружения Backend (.env)](#4-переменные-окружения-backend-env)
+- [5. Запуск Backend локально](#5-запуск-backend-локально)
+- [6. Запуск Frontend локально (Vite)](#6-запуск-frontend-локально-vite)
+- [7. Локальный запуск на Windows (очень подробно)](#7-локальный-запуск-на-windows-очень-подробно)
+- [8. Деплой Backend на Railway (пошагово)](#8-деплой-backend-на-railway-пошагово)
+- [9. Деплой PostgreSQL на Railway + подключение](#9-деплой-postgresql-на-railway--подключение)
+- [10. Настройка домена, HTTPS, CORS на Railway](#10-настройка-домена-https-cors-на-railway)
+- [11. Статика/Frontend: варианты деплоя](#11-статикfrontend-варианты-деплоя)
+- [12. WebSocket и звонки (STUN/TURN)](#12-websocket-и-звонки-stunturn)
+- [13. Миграции БД (Alembic)](#13-миграции-бд-alembic)
+- [14. Troubleshooting](#14-troubleshooting)
 
 ---
 
 ## 1. Требования
 
-### Для локальной разработки
-1. **Git** (для клонирования репозитория).
-2. **Python 3.11+**
-3. **Node.js 18+** (рекомендую 20 LTS)
-4. **PostgreSQL 14+** (или любой совместимый, если поправить `DATABASE_URL`)
-5. (Опционально) **Docker** — если хотите деплоить/запускать бэкенд контейнером.
+### Для локальной разработки (macOS/Linux)
+- Git
+- Python **3.11+**
+- Node.js **18+** (лучше 20 LTS)
+- PostgreSQL **14+** (или через Docker)
+
+### Для Windows
+- Git for Windows
+- Python **3.11+** (через официа��ьный установщик)
+- Node.js **18+**
+- Один из вариантов для БД:
+  - PostgreSQL локально **или**
+  - Docker Desktop (и PostgreSQL в контейнере)
 
 ---
 
 ## 2. Структура репозитория
 
 - `backend/` — FastAPI приложение
-  - `backend/app/main.py` — точка входа FastAPI (`app`)
-  - `backend/app/config.py` — настройки через переменные окружения
-  - `backend/app/database.py` — подключение SQLAlchemy (async)
-  - `backend/alembic.ini`, `backend/alembic/` — миграции
+  - `backend/app/main.py` — вход FastAPI (`app`)
+  - `backend/app/config.py` — настройки через env
+  - `backend/app/database.py` — SQLAlchemy async engine
   - `backend/requirements.txt` — зависимости Python
-  - `backend/Dockerfile` — Docker-образ для бэкенда
+  - `backend/Dockerfile` — Docker образ backend
+  - `backend/alembic.ini`, `backend/alembic/` — миграции
 - `desktop/` — Vite/React приложение
-  - `desktop/package.json` — зависимости и скрипты
-  - `desktop/vite.config.ts` — конфигурация Vite
+  - `desktop/package.json` — npm scripts
+  - `desktop/vite.config.ts` — Vite config (порт dev-сервера **1420**)
   - `desktop/src/` — исходники
 
 ---
 
-## 3. Быстрый старт (локально за 10 минут)
-
-Ниже команды для macOS/Linux (на Windows почти то же самое, но в PowerShell некоторые команды отличаются).
+## 3. Локальный запуск (быстрый старт)
 
 ### 3.1. Клонирование
 ```bash
@@ -65,27 +72,21 @@ git clone https://github.com/YuriiFridman/Tiscord.git
 cd Tiscord
 ```
 
-### 3.2. Backend: создать виртуальное окружение и установить зависимости
+### 3.2. Backend (Linux/macOS)
 ```bash
 cd backend
-
 python3.11 -m venv .venv
-# активировать:
 source .venv/bin/activate
-
 pip install -U pip
 pip install -r requirements.txt
 ```
 
-### 3.3. Backend: создать `.env`
-Файл **`backend/.env`** (см. раздел ниже) — минимум `DATABASE_URL` и `JWT_SECRET`.
-
-### 3.4. Запустить backend
+Создайте `backend/.env` (см. раздел 4), затем:
 ```bash
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-### 3.5. Frontend: установить зависимости и запустить dev
+### 3.3. Frontend (Linux/macOS/Windows)
 В новом терминале:
 ```bash
 cd desktop
@@ -95,17 +96,17 @@ npm run dev
 
 ---
 
-## 4. Настройка переменных окружения (.env)
+## 4. Переменные окружения Backend (.env)
 
-Backend читает переменные окружения из файла **`backend/.env`** (см. `backend/app/config.py`).
+Backend читает переменные из **`backend/.env`** (см. `backend/app/config.py`).
 
 Создайте файл `backend/.env`:
 
 ```env
 # ======================
-# Database
+# Database (PostgreSQL)
 # ======================
-DATABASE_URL=postgresql+asyncpg://user:pass@localhost/tiscord
+DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/tiscord
 
 # ======================
 # JWT (ОБЯЗАТЕЛЬНО поменять в проде)
@@ -121,7 +122,7 @@ JWT_REFRESH_EXPIRE_DAYS=30
 STORAGE_BACKEND=local
 STORAGE_LOCAL_PATH=./uploads
 
-# Если STORAGE_BACKEND=s3, заполните:
+# Для STORAGE_BACKEND=s3:
 STORAGE_S3_BUCKET=
 STORAGE_S3_ENDPOINT=
 STORAGE_S3_ACCESS_KEY=
@@ -148,35 +149,22 @@ MAX_ATTACHMENT_SIZE=8388608
 CORS_ORIGINS=*
 ```
 
-### Важно про DATABASE_URL
-По умолчанию строка рассчитана на **PostgreSQL + asyncpg**.
+---
 
-Пример, если у вас локальный Postgres:
-- пользователь: `postgres`
-- пароль: `postgres`
-- БД: `tiscord`
+## 5. Запуск Backend локально
 
-Тогда:
+### 5.1. Подготовка PostgreSQL (варианты)
+
+#### Вариант A: PostgreSQL установлен локально
+1) Создайте базу `tiscord`.
+2) Обновите `DATABASE_URL` в `backend/.env`.
+
+Пример:
 ```env
 DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/tiscord
 ```
 
----
-
-## 5. Локальный запуск Backend (FastAPI)
-
-### 5.1. Поднять PostgreSQL (варианты)
-
-#### Вариант A: PostgreSQL установлен локально
-1) Создайте БД:
-```bash
-createdb tiscord
-```
-
-2) Проверьте, что `DATABASE_URL` указывает на корректные `user/pass/host/port/dbname`.
-
-#### Вариант B: PostgreSQL в Docker (удобно)
-Если у вас есть Docker, можно поднять Postgres контейнером:
+#### Вариант B: PostgreSQL в Docker
 ```bash
 docker run --name tiscord-postgres \
   -e POSTGRES_PASSWORD=postgres \
@@ -186,350 +174,396 @@ docker run --name tiscord-postgres \
   -d postgres:16
 ```
 
-И в `.env`:
+И в `backend/.env`:
 ```env
 DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/tiscord
 ```
 
----
-
-### 5.2. Миграции БД (если в проекте есть версии миграций)
-В репозитории есть `backend/alembic.ini` и папка `backend/alembic/`.
-
-Обычно порядок такой:
+### 5.2. Миграции (если настроены)
 ```bash
 cd backend
 source .venv/bin/activate
-
-# применить миграции:
 alembic upgrade head
 ```
 
-> Если миграции не настроены/нет версий — этот шаг может быть не нужен или потребует создания миграций.
-
----
-
-### 5.3. Запуск сервера разработки
-Из папки `backend/`:
+### 5.3. Запуск сервера
 ```bash
+cd backend
+source .venv/bin/activate
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-- API будет доступно на: `http://127.0.0.1:8000`
-- Health-check: `http://127.0.0.1:8000/health`
-- WebSocket: `ws://127.0.0.1:8000/ws?token=...`
-- Swagger (если включен по умолчанию FastAPI): `http://127.0.0.1:8000/docs`
+Полезные URL:
+- Health: `http://127.0.0.1:8000/health`
+- Swagger: `http://127.0.0.1:8000/docs`
+- WS: `ws://127.0.0.1:8000/ws?token=...`
 
 ---
 
-## 6. Локальный запуск Desktop/Frontend (Vite)
+## 6. Запуск Frontend локально (Vite)
 
-Из папки `desktop/`:
 ```bash
+cd desktop
 npm install
 npm run dev
 ```
 
-По умолчанию Vite dev server (см. `vite.config.ts`) стартует на порту:
+Dev URL (порт задан в `vite.config.ts`):
 - `http://localhost:1420`
 
-### 6.1. Настройка API URL во фронтенде
-В репозитории есть `envPrefix: ['VITE_']`, значит фронт может использовать переменные `VITE_*`.
+### Важно про API URL во фронте
+Vite настроен на переменные с префиксом `VITE_`.  
+Если во фронте используется базовый URL API через env (часто это `VITE_API_URL`), создайте:
 
-Если у вас во фронтенде предусмотрена переменная типа `VITE_API_URL`, создайте файл:
-- `desktop/.env` или `desktop/.env.local`
-
-Пример:
+`desktop/.env.local`
 ```env
 VITE_API_URL=http://127.0.0.1:8000
 ```
 
-> Точное имя переменной зависит от того, как она используется в `desktop/src`. Если скажешь, где хранится base URL, я допишу README под фактическую реализацию.
+> Точное имя переменной зависит от того, как это реализовано в `desktop/src`. Если скажешь/покажешь файл где создаётся клиент API — я приведу 100% точную инструкцию.
 
 ---
 
-## 7. Проверка, что всё работает
+## 7. Локальный запуск на Windows (очень подробно)
 
-### 7.1. Проверить backend
-Откройте:
-- `http://127.0.0.1:8000/health`  
-Ожидаемый ответ:
-```json
-{"status":"ok"}
+Ниже инструкция рассчитана на Windows 10/11.
+
+### 7.1. Установить инструменты
+
+#### 7.1.1. Git for Windows
+- Установите Git (обычно ставят вместе Git Bash).
+- После установки откройте **Git Bash** или **PowerShell**.
+
+#### 7.1.2. Python 3.11+
+- Скачайте Python 3.11+ с официального сайта.
+- В установщике обязательно отметьте:
+  - **Add python.exe to PATH**
+  - (желательно) **Install pip**
+
+Проверка в PowerShell:
+```powershell
+python --version
+pip --version
 ```
 
-### 7.2. Проверить фронтенд
-Откройте:
-- `http://localhost:1420`
+#### 7.1.3. Node.js
+- Ставьте Node.js 18+ (лучше 20 LTS)
+Проверка:
+```powershell
+node -v
+npm -v
+```
 
-Если фронт делает запросы к API — откройте DevTools → Network и убедитесь, что запросы идут на ваш backend.
+#### 7.1.4. PostgreSQL (выберите один вариант)
+**Вариант A (рекомендовано для новичков): Docker Desktop + контейнер Postgres**  
+**Вариант B: PostgreSQL локально** (через installer)
 
 ---
 
-## 8. Сборка Frontend для продакшена
-
-Из `desktop/`:
-```bash
-npm install
-npm run build
-```
-
-Обычно Vite собирает в `desktop/dist/`.
-
-Локально посмотрет�� прод-сборку:
-```bash
-npm run preview
-```
-
----
-
-## 9. Деплой на VPS (Linux) без Docker: systemd + reverse proxy
-
-Ниже — рабочая схема для продакшена:
-- Backend: `uvicorn` как сервис systemd (или `gunicorn` + `uvicorn.workers`)
-- Nginx: reverse proxy на `localhost:8000`
-- Frontend: статикой через Nginx (если это web-вариант) или отдельный домен
-
-### 9.1. Подготовка сервера
-Пример для Ubuntu:
-```bash
-sudo apt update
-sudo apt install -y python3.11 python3.11-venv python3-pip nginx git
-```
-
-Поставьте PostgreSQL (локально на сервер или отдельным сервисом managed DB).
-
-### 9.2. Пользователь и директория
-```bash
-sudo adduser --disabled-password --gecos "" tiscord
-sudo su - tiscord
-
+### 7.2. Клонировать репозиторий (Windows)
+В PowerShell:
+```powershell
 git clone https://github.com/YuriiFridman/Tiscord.git
-cd Tiscord/backend
-python3.11 -m venv .venv
-source .venv/bin/activate
-pip install -U pip
+cd Tiscord
+```
+
+---
+
+### 7.3. Backend на Windows (venv + зависимости)
+
+Перейдите в `backend`:
+```powershell
+cd backend
+```
+
+Создайте виртуальное окружение:
+```powershell
+python -m venv .venv
+```
+
+Активируйте venv:
+
+**PowerShell:**
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+Если PowerShell ругается на ExecutionPolicy, выполните (один раз):
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+И снова активируйте venv.
+
+Обновите pip и установите зависимости:
+```powershell
+python -m pip install -U pip
 pip install -r requirements.txt
 ```
 
-Создайте `backend/.env` и заполните **продовые** значения (особенно `JWT_SECRET`, `CORS_ORIGINS`, `DATABASE_URL`).
-
-### 9.3. systemd unit для backend
-Создайте файл на сервере:
-`/etc/systemd/system/tiscord-backend.service`
-
-Пример:
-```ini
-[Unit]
-Description=Tiscord Backend (FastAPI)
-After=network.target
-
-[Service]
-Type=simple
-User=tiscord
-WorkingDirectory=/home/tiscord/Tiscord/backend
-Environment=PYTHONPATH=/home/tiscord/Tiscord/backend
-ExecStart=/home/tiscord/Tiscord/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
-Restart=always
-RestartSec=3
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Запуск:
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable --now tiscord-backend
-sudo systemctl status tiscord-backend
-```
-
-Логи:
-```bash
-sudo journalctl -u tiscord-backend -f
-```
-
-### 9.4. Nginx reverse proxy
-Создайте конфиг (пример) `/etc/nginx/sites-available/tiscord`:
-
-```nginx
-server {
-    listen 80;
-    server_name api.example.com;
-
-    client_max_body_size 20m;
-
-    location / {
-        proxy_pass http://127.0.0.1:8000;
-
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-
-        # WebSocket support:
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-    }
-}
-```
-
-Активировать:
-```bash
-sudo ln -s /etc/nginx/sites-available/tiscord /etc/nginx/sites-enabled/tiscord
-sudo nginx -t
-sudo systemctl reload nginx
-```
-
-Теперь backend доступен по `http://api.example.com/`.
-
-> Для HTTPS поставьте certbot (Let’s Encrypt) — если хочешь, добавлю подробный блок под твой домен и Ubuntu-версию.
-
 ---
 
-## 10. Деплой на VPS (Linux) через Docker
+### 7.4. PostgreSQL на Windows (проще через Docker)
 
-В репозитории есть `backend/Dockerfile`, который запускает:
-```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8000
+Если установлен Docker Desktop, в PowerShell:
+```powershell
+docker run --name tiscord-postgres `
+  -e POSTGRES_PASSWORD=postgres `
+  -e POSTGRES_USER=postgres `
+  -e POSTGRES_DB=tiscord `
+  -p 5432:5432 `
+  -d postgres:16
 ```
 
-### 10.1. Собрать и запустить backend-контейнер
-На сервере:
-```bash
-git clone https://github.com/YuriiFridman/Tiscord.git
-cd Tiscord/backend
-
-# Собираем образ
-docker build -t tiscord-backend:latest .
-
-# Запускаем
-docker run --name tiscord-backend \
-  --env-file .env \
-  -p 8000:8000 \
-  -d tiscord-backend:latest
-```
-
-Проверка:
-```bash
-curl http://127.0.0.1:8000/health
-```
-
-### 10.2. Рекомендуемая схема (prod)
-- backend контейнер без публикации наружу
-- nginx на хосте публикует 80/443 и проксирует на контейнер
-- PostgreSQL лучше отдельным managed DB или отдельным контейнером + volume
-
-> В репозитории **нет** `docker-compose.yml` (на момент чтения), но если хочешь — мо��у предложить готовый `docker-compose.yml` под backend+postgres+nginx.
-
----
-
-## 11. Настройка CORS и доменов
-
-Переменная:
-- `CORS_ORIGINS`
-
-В `backend/app/main.py` она читается как строка и делится по запятым.
-
-### Пример для продакшена
-Если фронтенд на `https://app.example.com`, API на `https://api.example.com`:
+Создайте файл `backend\.env` (в папке `backend`) и укажите:
 ```env
-CORS_ORIGINS=https://app.example.com
+DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/tiscord
+JWT_SECRET=dev-secret
+CORS_ORIGINS=*
+STORAGE_BACKEND=local
+STORAGE_LOCAL_PATH=./uploads
 ```
 
-Если несколько доменов:
-```env
-CORS_ORIGINS=https://app.example.com,https://admin.example.com
-```
-
-> Не используйте `*` в продакшене без необходимости.
-
 ---
 
-## 12. Хранилище файлов (local vs s3)
-
-Настройки:
-- `STORAGE_BACKEND=local` или `s3`
-- Для `local`: файлы лежат в `STORAGE_LOCAL_PATH` (по умолчанию `./uploads`)
-- В dev режиме (когда `local`) backend монтирует:
-  - `/uploads` → директория `STORAGE_LOCAL_PATH`
-
-### В проде с local storage
-Убедитесь, что:
-- директория существует
-- у процесса есть права записи
-- эта директория **сохранится** при деплое (volume, постоянное хранилище)
-
-### В проде с S3
-Заполните:
-- `STORAGE_S3_BUCKET`
-- `STORAGE_S3_ENDPOINT`
-- `STORAGE_S3_ACCESS_KEY`
-- `STORAGE_S3_SECRET_KEY`
-- `STORAGE_S3_REGION`
-
----
-
-## 13. WebSocket и голос/звонки (STUN/TURN)
-
-В `.env`:
-- `STUN_URLS` — список/строка STUN серверов
-- `TURN_URL`, `TURN_USER`, `TURN_PASS` — если нужен TURN (обычно нужен для стабильной связи за NAT)
-
-Если звонки/voice “не коннектятся” в реальных сетях — почти всегда нужен TURN.
-
----
-
-## 14. Миграции БД (alembic)
-
-Основные команды (из `backend/` в активированном venv):
-
-Применить:
-```bash
+### 7.5. Миграции (если используются)
+В том же терминале (venv активен):
+```powershell
 alembic upgrade head
 ```
 
-Откатить на 1 миграцию:
+---
+
+### 7.6. Запуск backend на Windows
+```powershell
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+Проверка:
+- `http://127.0.0.1:8000/health`
+
+---
+
+### 7.7. Frontend на Windows (npm)
+В новом PowerShell окне:
+```powershell
+cd Tiscord\desktop
+npm install
+npm run dev
+```
+
+Откройте:
+- `http://localhost:1420`
+
+---
+
+## 8. Деплой Backend на Railway (пошагово)
+
+Railway удобен тем, что:
+- можно подключить GitHub репозиторий,
+- можно добавить PostgreSQL как сервис,
+- можно задать переменные окружения,
+- Railway даст публичный домен и HTTPS.
+
+Ниже — инструкция “как обычно делают правильно”.
+
+### 8.1. Подготовить проект к Railway (важные моменты)
+1) **Backend должен слушать порт из переменной `PORT`**, которую Railway выставляет автоматически.
+2) Нельзя хардкодить `--port 8000` в проде.
+3) Нужна команда запуска, которая использует `$PORT`.
+
+Сейчас в `backend/Dockerfile` порт захардкожен (`8000`). Для Railway можно сделать **без Dockerfile**, через “Start Command”, либо добавить конфиги. Ниже вариант **через Start Command**, без изменения репозитория.
+
+---
+
+### 8.2. Создать проект в Railway и подключить GitHub
+1) Зайдите в Railway → **New Project**
+2) Выберите **Deploy from GitHub repo**
+3) Выберите репозиторий `YuriiFridman/Tiscord`
+4) Важно: Railway по умолчанию пытается деплоить корень. Нам нужен **backend**:
+   - В настройках сервиса найдите **Root Directory** / **Monorepo settings**
+   - Укажите: `backend`
+
+> В Railway интерфейс иногда меняется, но смысл один: сервис должен строиться из папки `backend`.
+
+---
+
+### 8.3. Настроить команду запуска (Start Command)
+В Railway → ваш сервис backend → Settings → Start Command укажите:
+
 ```bash
+uvicorn app.main:app --host 0.0.0.0 --port $PORT
+```
+
+Это критично: Railway маршрутизирует трафик на порт, который он выдал в `PORT`.
+
+---
+
+### 8.4. Настроить переменные окружения (Variables)
+В Railway → backend service → Variables добавьте минимум:
+
+**Обязательно:**
+- `JWT_SECRET` = длинная случайная строка (минимум 32+ символа)
+- `CORS_ORIGINS` = домен фронтенда (см. раздел 10)
+- `DATABASE_URL` = строка подключения к Railway Postgres (см. следующий раздел)
+
+**Рекомендуется:**
+- `STORAGE_BACKEND` = `local` или `s3`
+
+> В продакшене **не используйте** дефолт `JWT_SECRET=changeme-in-production`.
+
+---
+
+### 8.5. Деплой
+После указания Root Directory + Start Command + Variables Railway сделает build и deploy.
+
+Проверка:
+- Railway выдаст URL вида `https://<something>.up.railway.app`
+- Откройте:
+  - `https://<...>/health`
+
+---
+
+## 9. Деплой PostgreSQL на Railway + подключение
+
+### 9.1. Добавить PostgreSQL
+В Railway в проекте:
+1) **New** → **Database** → **PostgreSQL**
+2) Railway создаст отдельный сервис Postgres.
+
+### 9.2. Получить DATABASE_URL
+Обычно Railway предоставляет переменные подключения (в Postgres service → Variables), среди них будет `DATABASE_URL` или параметры host/user/password/dbname.
+
+Вам нужно, чтобы в backend service была переменная:
+
+- `DATABASE_URL=postgresql+asyncpg://...`
+
+Важно: SQLAlchemy async требует драйвер `asyncpg`, поэтому схема должна быть:
+- `postgresql+asyncpg://user:pass@host:port/dbname`
+
+Если Railway даёт URL в формате `postgresql://...`, замените префикс на:
+- `postgresql+asyncpg://...`
+
+Пример:
+- было: `postgresql://user:pass@host:5432/db`
+- надо: `postgresql+asyncpg://user:pass@host:5432/db`
+
+### 9.3. Миграции на Railway
+Есть 2 подхода:
+
+**Подход A (простой): выполнить миграции вручную один раз**
+- Локально (или в CI) выполнить миграции на удалённую БД, указав `DATABASE_URL` Railway.
+- Способ зависит от того, как вы хотите “рулить” миграциями.
+
+**Подход B (автоматический): миграции при старте**
+- Обычно добавляют entrypoint/скрипт, который делает `alembic upgrade head`, затем запускает uvicorn.
+- Это удобно, но нужно делать аккуратно (конкуренция при нескольких инстансах).
+
+> Если хочешь, я предложу конкретный безопасный вариант под Railway (с учётом best practices).
+
+---
+
+## 10. Настройка домена, HTTPS, CORS на Railway
+
+### 10.1. HTTPS
+Railway автоматически даёт HTTPS на своём домене.
+
+### 10.2. CORS
+В `backend/app/main.py` значение `CORS_ORIGINS` делится по запятым.
+
+Пример:
+- фронтенд будет на `https://tiscord-web.vercel.app`
+Тогда в Railway Variables у backend:
+```env
+CORS_ORIGINS=https://tiscord-web.vercel.app
+```
+
+Если несколько:
+```env
+CORS_ORIGINS=https://tiscord-web.vercel.app,https://your-custom-domain.com
+```
+
+**Не рекомендую** `*` в проде (только для dev).
+
+---
+
+## 11. Статик/Frontend: варианты деплоя
+
+Так как фронтенд лежит в `desktop/` и это Vite:
+
+### Вариант A (самый популярный): деплоить фронт отдельно (Vercel/Netlify/Cloudflare Pages)
+1) Собрать:
+```bash
+cd desktop
+npm ci
+npm run build
+```
+2) Опубликовать `desktop/dist`.
+
+Плюсы: проще, дешевле, CDN.
+
+### Вариант B: тоже на Railway как отдельный сервис
+- Создать второй сервис в Railway из папки `desktop`
+- Build Command:
+  ```bash
+  npm ci && npm run build
+  ```
+- Start Command:
+  - Нужен статический сервер (например `npx serve -s dist -l $PORT`), либо Railway Nixpacks сам поднимет.
+  
+> Если скажешь, где именно хочешь хостить фронт (Railway или Vercel), я допишу точные команды/настройки под твой выбор.
+
+---
+
+## 12. WebSocket и звонки (STUN/TURN)
+
+В `.env`/Variables:
+- `STUN_URLS` — можно оставить дефолт
+- `TURN_*` — для реального продакшена часто нужен TURN сервер (иначе у части пользователей звонки не проходят через NAT)
+
+---
+
+## 13. Миграции БД (Alembic)
+
+Команды (в `backend/`):
+```bash
+alembic upgrade head
 alembic downgrade -1
+alembic revision -m "message"
 ```
-
-Создать новую миграцию (пример):
-```bash
-alembic revision -m "add users table"
-```
-
-> Если используются автогенерации, обычно делают `--autogenerate`, но корректность зависит от того, как настроены модели и `env.py` Alembic.
 
 ---
 
-## 15. Troubleshooting (частые ошибки)
+## 14. Troubleshooting
 
-### 15.1. `ModuleNotFoundError: No module named 'app'`
-Запускайте `uvicorn` **из папки `backend/`**, либо выставляйте `PYTHONPATH`:
-```bash
-cd backend
-uvicorn app.main:app --reload
-```
+### 14.1. Railway: сервис запустился, но 502/не отвечает
+Почти всегда причина: приложение слушает не тот порт.
+- Убедитесь, что Start Command:
+  ```bash
+  uvicorn app.main:app --host 0.0.0.0 --port $PORT
+  ```
 
-### 15.2. Ошибки подключения к БД
-- Проверьте `DATABASE_URL` (логин/пароль/порт/имя БД)
-- Проверьте, что Postgres запущен
-- Если Postgres в Docker — убедитесь, что порт проброшен и доступен
+### 14.2. Railway: ошибки подключения к БД
+- Проверьте, что `DATABASE_URL` в backend service реально указывает на Railway Postgres
+- Проверьте, что префикс `postgresql+asyncpg://...`
 
-### 15.3. CORS ошибки во фронтенде
-- Убедитесь, что `CORS_ORIGINS` включает домен/порт фронта
-- В dev можно временно `CORS_ORIGINS=*`
+### 14.3. Windows: не активируется venv
+- PowerShell ExecutionPolicy:
+  ```powershell
+  Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+  ```
+- Активировать:
+  ```powershell
+  .\.venv\Scripts\Activate.ps1
+  ```
 
-### 15.4. Порт занят
-- Backend: поменяйте `--port`
-- Frontend (Vite): по умолчанию `1420` и `strictPort: true`, если порт занят — сервер упадёт. Освободите порт или поменяйте в `vite.config.ts`.
+### 14.4. Vite порт 1420 занят
+Vite настроен на `strictPort: true`, поэтому упадёт. Освободите порт или поменяйте `server.port` в `desktop/vite.config.ts`.
 
 ---
 
-## Что я могу улучшить в README дальше (уточни, и я допишу “под ключ”)
-1) **Какой именно “хостинг” ты имеешь в виду**: VPS (Ubuntu), Render/Fly.io, Railway, Heroku-like, или shared hosting?
-2) Фронтенд планируется как **web-сайт** (Nginx + `dist/`) или как **Tauri desktop app** (сборка `.exe/.dmg/.AppImage`)?
-3) Нужен ли **HTTPS** блок (Certbot/Let’s Encrypt) и под какой домен?
-4) Ты хочешь деплой **в одном домене** (`example.com` + `/api`) или **раздельно** (`app.` и `api.`)?
+## Уточняющие вопросы (чтобы довести README до “идеала”)
+1) Фронтенд ты реально хочешь деплоить **тоже на Railway**, или лучше Vercel/Netlify?
+2) Нужна ли инструкция именно для **Tauri-сборки** (desktop-приложение), или достаточно web-версии?
+3) Миграции Alembic сейчас реально используются и есть `alembic/versions/*`? Если да — хочешь автоматический прогон миграций при деплое?
 
-Скажи ответы — и я адаптирую README под твой реальный сценарий (с точными командами, конфигами Nginx и systemd, и безопасными prod-настройками).
+Скажи ответы — и я подправлю README под твой точный сценарий (без предположений).
