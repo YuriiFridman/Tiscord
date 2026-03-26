@@ -160,7 +160,7 @@ export const usersApi = {
 // ─── Guilds ───────────────────────────────────────────────────────────────────
 
 export const guildsApi = {
-  list: () => request<Guild[]>('/guilds'),
+  list: () => request<Guild[]>('/guilds/'),
   get: (id: string) => request<Guild>(`/guilds/${id}`),
   create: (name: string) => request<Guild>('/guilds', { method: 'POST', body: JSON.stringify({ name }) }),
   update: (id: string, data: Partial<Pick<Guild, 'name'>>) =>
@@ -228,7 +228,7 @@ export const attachmentsApi = {
 // ─── DMs ──────────────────────────────────────────────────────────────────────
 
 export const dmsApi = {
-  list: () => request<DMThread[]>('/dms'),
+  list: () => request<DMThread[]>('/dms/'),
   get: (threadId: string) => request<DMThread>(`/dms/${threadId}`),
   create: (userId: string) => request<DMThread>('/dms', { method: 'POST', body: JSON.stringify({ user_id: userId }) }),
   messages: (channelId: string, params?: { before?: string; limit?: number }) => {
@@ -249,7 +249,7 @@ export const dmsApi = {
 
 export const invitesApi = {
   create: (channelId: string, max_uses?: number, expires_in_hours?: number) =>
-    request<Invite>('/invites', {
+    request<Invite>('/invites/', {
       method: 'POST',
       body: JSON.stringify({ channel_id: channelId, max_uses, expires_in_hours }),
     }),
