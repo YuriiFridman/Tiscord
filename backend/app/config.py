@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -30,6 +31,16 @@ class Settings(BaseSettings):
     MAX_ATTACHMENT_SIZE: int = 8 * 1024 * 1024  # 8 MB
 
     CORS_ORIGINS: str = "*"
+
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def fix_database_url(cls, v: str) -> str:
+        """Normalize Railway's postgres:// or postgresql:// to postgresql+asyncpg://."""
+        if v.startswith("postgresql://"):
+            return v.replace("postgresql://", "postgresql+asyncpg://", 1)
+        elif v.startswith("postgres://"):
+            return v.replace("postgres://", "postgresql+asyncpg://", 1)
+        return v
 
 
 @lru_cache
