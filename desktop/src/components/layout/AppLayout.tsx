@@ -12,6 +12,7 @@ import DMList from '@/components/dm/DMList';
 import DMView from '@/components/dm/DMView';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { queryClient } from '@/lib/queryClient';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 type ActiveView = { type: 'guild'; guildId: string; channelId: string | null } | { type: 'dm'; channelId: string | null };
 
@@ -57,6 +58,7 @@ export default function AppLayout() {
 
   // Auto-select first text channel when guild selected
   const guildId = view.type === 'guild' ? view.guildId : undefined;
+  const viewChannelId = view.channelId;
   const { data: channels = [] } = useQuery({
     queryKey: ['channels', guildId],
     queryFn: () => channelsApi.list(guildId!),
@@ -64,11 +66,11 @@ export default function AppLayout() {
   });
 
   useEffect(() => {
-    if (view.type === 'guild' && !view.channelId && channels.length > 0) {
+    if (guildId && !viewChannelId && channels.length > 0) {
       const first = channels.find((c) => c.type === 'text');
-      if (first) setView({ type: 'guild', guildId: view.guildId, channelId: first.id });
+      if (first) setView({ type: 'guild', guildId, channelId: first.id });
     }
-  }, [channels, view]);
+  }, [channels, guildId, viewChannelId]);
 
   function selectGuild(id: string) {
     setView({ type: 'guild', guildId: id, channelId: null });
@@ -110,6 +112,7 @@ export default function AppLayout() {
               channels={channels}
               activeChannelId={view.channelId}
               onSelectChannel={selectChannel}
+              onLeaveGuild={goToDMs}
             />
           ) : (
             <DMList
@@ -122,19 +125,19 @@ export default function AppLayout() {
 
         {/* Main Content */}
         <div className="flex flex-1 flex-col overflow-hidden">
-          {view.type === 'guild' && view.channelId ? (
-            activeChannel?.type === 'voice' ? (
-              <ChannelView channel={activeChannel} guild={activeGuild!} />
-            ) : activeChannel ? (
-              <ChannelView channel={activeChannel} guild={activeGuild!} />
+          <ErrorBoundary>
+            {view.type === 'guild' && view.channelId ? (
+              activeChannel ? (
+                <ChannelView channel={activeChannel} guild={activeGuild!} />
+              ) : (
+                <BlankState label={t('common.loading')} />
+              )
+            ) : view.type === 'dm' && view.channelId ? (
+              <DMView dmId={view.channelId} />
             ) : (
-              <BlankState label={t('common.loading')} />
-            )
-          ) : view.type === 'dm' && view.channelId ? (
-            <DMView dmId={view.channelId} />
-          ) : (
-            <BlankState label={view.type === 'guild' ? t('channel.text') : t('nav.direct_messages')} />
-          )}
+              <BlankState label={view.type === 'guild' ? t('channel.text') : t('nav.direct_messages')} />
+            )}
+          </ErrorBoundary>
         </div>
       </div>
     </TooltipProvider>

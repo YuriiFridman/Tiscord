@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import type { Guild, Channel, Category } from '@/types';
-import { channelsApi } from '@/lib/api';
+import { channelsApi, guildsApi } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
@@ -22,18 +22,28 @@ interface Props {
   channels: Channel[];
   activeChannelId: string | null;
   onSelectChannel: (id: string) => void;
+  onLeaveGuild: () => void;
 }
 
 type ChannelModalState =
   | { open: false }
   | { open: true; type: 'text' | 'voice'; categoryId: string | null };
 
-export default function ChannelSidebar({ guild, channels, activeChannelId, onSelectChannel }: Props) {
+export default function ChannelSidebar({ guild, channels, activeChannelId, onSelectChannel, onLeaveGuild }: Props) {
   const { t } = useTranslation();
+  const qc = useQueryClient();
   const [showSettings, setShowSettings] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
   const [showCreateCategory, setShowCreateCategory] = useState(false);
   const [channelModal, setChannelModal] = useState<ChannelModalState>({ open: false });
+
+  const leaveGuild = useMutation({
+    mutationFn: () => guildsApi.leave(guild.id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['guilds'] });
+      onLeaveGuild();
+    },
+  });
 
   const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ['categories', guild.id],
@@ -92,7 +102,15 @@ export default function ChannelSidebar({ guild, channels, activeChannelId, onSel
             {t('channel.createVoiceChannel')}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem danger>
+          <DropdownMenuItem
+            danger
+            disabled={leaveGuild.isPending}
+            onClick={() => {
+              if (window.confirm(t('guild.leave_confirm', { name: guild.name }))) {
+                leaveGuild.mutate();
+              }
+            }}
+          >
             <LeaveIcon />
             {t('guild.leave')}
           </DropdownMenuItem>

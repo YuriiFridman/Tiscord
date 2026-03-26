@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { Category } from '@/types';
+import type { Category, Channel } from '@/types';
 import { channelsApi } from '@/lib/api';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -47,6 +47,10 @@ export default function CreateChannelModal({
         is_nsfw: isNsfw ? true : undefined,
       }),
     onSuccess: (channel) => {
+      // Immediately add to cache so the channel is available when onCreated navigates to it
+      qc.setQueryData<Channel[]>(['channels', guildId], (old) =>
+        old ? [...old, channel] : [channel],
+      );
       qc.invalidateQueries({ queryKey: ['channels', guildId] });
       handleClose();
       onCreated?.(channel.id);

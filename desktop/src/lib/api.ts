@@ -6,7 +6,6 @@ import type {
   Invite,
   LoginRequest,
   Message,
-  PaginatedMessages,
   RegisterRequest,
   Role,
   TokenResponse,
@@ -162,11 +161,11 @@ export const usersApi = {
 export const guildsApi = {
   list: () => request<Guild[]>('/guilds/'),
   get: (id: string) => request<Guild>(`/guilds/${id}`),
-  create: (name: string) => request<Guild>('/guilds', { method: 'POST', body: JSON.stringify({ name }) }),
+  create: (name: string) => request<Guild>('/guilds/', { method: 'POST', body: JSON.stringify({ name }) }),
   update: (id: string, data: Partial<Pick<Guild, 'name'>>) =>
     request<Guild>(`/guilds/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   delete: (id: string) => request<void>(`/guilds/${id}`, { method: 'DELETE' }),
-  leave: (id: string) => request<void>(`/guilds/${id}/leave`, { method: 'POST' }),
+  leave: (id: string) => request<void>(`/guilds/${id}/members/me`, { method: 'DELETE' }),
   members: (id: string) => request<User[]>(`/guilds/${id}/members`),
 };
 
@@ -195,7 +194,7 @@ export const messagesApi = {
     if (params?.before) qs.set('before', params.before);
     if (params?.limit) qs.set('limit', String(params.limit));
     const q = qs.toString() ? `?${qs}` : '';
-    return request<PaginatedMessages>(`/channels/${channelId}/messages${q}`);
+    return request<Message[]>(`/channels/${channelId}/messages${q}`);
   },
   send: (channelId: string, content: string) =>
     request<Message>(`/channels/${channelId}/messages`, {
@@ -211,7 +210,7 @@ export const messagesApi = {
     request<void>(`/channels/${channelId}/messages/${messageId}`, { method: 'DELETE' }),
   react: (channelId: string, messageId: string, emoji: string) =>
     request<void>(`/channels/${channelId}/messages/${messageId}/reactions/${encodeURIComponent(emoji)}`, {
-      method: 'PUT',
+      method: 'POST',
     }),
   unreact: (channelId: string, messageId: string, emoji: string) =>
     request<void>(`/channels/${channelId}/messages/${messageId}/reactions/${encodeURIComponent(emoji)}`, {
@@ -240,7 +239,7 @@ export const dmsApi = {
     if (params?.before) qs.set('before', params.before);
     if (params?.limit) qs.set('limit', String(params.limit));
     const q = qs.toString() ? `?${qs}` : '';
-    return request<PaginatedMessages>(`/dms/${channelId}/messages${q}`);
+    return request<Message[]>(`/dms/${channelId}/messages${q}`);
   },
   send: (channelId: string, content: string) =>
     request<Message>(`/dms/${channelId}/messages`, {
@@ -252,13 +251,14 @@ export const dmsApi = {
 // ─── Invites ──────────────────────────────────────────────────────────────────
 
 export const invitesApi = {
-  create: (channelId: string, max_uses?: number, expires_in_hours?: number) =>
+  // expires_in is in seconds (matches backend InviteCreate schema)
+  create: (guildId: string, channelId: string, max_uses?: number, expires_in?: number) =>
     request<Invite>('/invites/', {
       method: 'POST',
-      body: JSON.stringify({ channel_id: channelId, max_uses, expires_in_hours }),
+      body: JSON.stringify({ guild_id: guildId, channel_id: channelId, max_uses, expires_in }),
     }),
   get: (code: string) => request<Invite>(`/invites/${code}`),
-  join: (code: string) => request<Guild>(`/invites/${code}/join`, { method: 'POST' }),
+  join: (code: string) => request<{ guild_id: string }>(`/invites/${code}/accept`, { method: 'POST' }),
   delete: (code: string) => request<void>(`/invites/${code}`, { method: 'DELETE' }),
 };
 

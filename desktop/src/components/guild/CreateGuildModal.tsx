@@ -34,7 +34,7 @@ export default function CreateGuildModal({ open, onClose }: Props) {
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent style={{ background: 'var(--bg-secondary)', border: '1px solid rgba(255,255,255,0.08)', color: 'var(--text-primary)' }}>
         <DialogHeader>
-          <DialogTitle style={{ color: 'var(--text-primary)' }}>{t('guild.createServer')}</DialogTitle>
+          <DialogTitle style={{ color: 'var(--text-primary)' }}>{t('guild.create_server')}</DialogTitle>
         </DialogHeader>
 
         {/* Icon preview */}
@@ -50,12 +50,12 @@ export default function CreateGuildModal({ open, onClose }: Props) {
         <div className="space-y-3">
           <div>
             <label className="text-xs font-semibold uppercase mb-1 block" style={{ color: 'var(--text-muted)' }}>
-              {t('guild.serverName')}
+              {t('guild.server_name')}
             </label>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder={t('guild.serverNamePlaceholder')}
+              placeholder={t('guild.server_name_placeholder')}
               maxLength={100}
               onKeyDown={(e) => e.key === 'Enter' && name.trim() && create.mutate()}
               style={{ background: 'var(--bg-primary)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-primary)' }}

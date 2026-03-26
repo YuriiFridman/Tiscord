@@ -30,7 +30,7 @@ export default function InviteModal({ mode, guildId, onClose }: Props) {
   const firstTextChannel = channels.find((c) => c.type === 'text');
 
   const createInvite = useMutation({
-    mutationFn: () => invitesApi.create(firstTextChannel!.id),
+    mutationFn: () => invitesApi.create(guildId!, firstTextChannel!.id),
     onSuccess: (data) => {
       setInvite(data);
       setError('');

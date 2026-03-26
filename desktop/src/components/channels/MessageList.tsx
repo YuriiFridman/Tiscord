@@ -5,7 +5,7 @@ import { messagesApi } from '@/lib/api';
 import { useWebSocketStore } from '@/store/ws';
 import { queryClient } from '@/lib/queryClient';
 import { formatDateHeader, isSameDay } from '@/lib/utils';
-import type { Message, PaginatedMessages } from '@/types';
+import type { Message } from '@/types';
 import MessageItem from './MessageItem';
 
 interface Props {
@@ -28,9 +28,9 @@ export default function MessageList({ channelId }: Props) {
       return messagesApi.list(channelId, { before: pageParam, limit: PAGE_SIZE });
     },
     initialPageParam: undefined as string | undefined,
-    getNextPageParam: (firstPage: PaginatedMessages) => {
-      if (firstPage.items.length < PAGE_SIZE) return undefined;
-      return firstPage.items[0]?.id;
+    getNextPageParam: (firstPage: Message[]) => {
+      if (firstPage.length < PAGE_SIZE) return undefined;
+      return firstPage[0]?.id;
     },
     select: (data) => ({
       pages: [...data.pages].reverse(),
@@ -40,7 +40,7 @@ export default function MessageList({ channelId }: Props) {
 
   // Flatten messages in order
   const messages: Message[] = data
-    ? data.pages.flatMap((page) => [...page.items].reverse()).reverse()
+    ? data.pages.flatMap((page) => [...page].reverse()).reverse()
     : [];
 
   // Scroll to bottom on initial load and new messages
@@ -92,16 +92,13 @@ export default function MessageList({ channelId }: Props) {
     (raw: unknown) => {
       const msg = raw as Message;
       if (msg.channel_id !== channelId) return;
-      queryClient.setQueryData<{ pages: PaginatedMessages[]; pageParams: unknown[] }>(
+      queryClient.setQueryData<{ pages: Message[][]; pageParams: unknown[] }>(
         ['messages', channelId],
         (old) => {
           if (!old) return old;
           const pages = [...old.pages];
           const lastPage = pages[pages.length - 1];
-          pages[pages.length - 1] = {
-            ...lastPage,
-            items: [...lastPage.items, msg],
-          };
+          pages[pages.length - 1] = [...lastPage, msg];
           return { ...old, pages };
         },
       );
@@ -113,16 +110,13 @@ export default function MessageList({ channelId }: Props) {
     (raw: unknown) => {
       const msg = raw as Message;
       if (msg.channel_id !== channelId) return;
-      queryClient.setQueryData<{ pages: PaginatedMessages[]; pageParams: unknown[] }>(
+      queryClient.setQueryData<{ pages: Message[][]; pageParams: unknown[] }>(
         ['messages', channelId],
         (old) => {
           if (!old) return old;
           return {
             ...old,
-            pages: old.pages.map((page) => ({
-              ...page,
-              items: page.items.map((m) => (m.id === msg.id ? msg : m)),
-            })),
+            pages: old.pages.map((page) => page.map((m) => (m.id === msg.id ? msg : m))),
           };
         },
       );
@@ -134,16 +128,13 @@ export default function MessageList({ channelId }: Props) {
     (raw: unknown) => {
       const { message_id, channel_id } = raw as { message_id: string; channel_id: string };
       if (channel_id !== channelId) return;
-      queryClient.setQueryData<{ pages: PaginatedMessages[]; pageParams: unknown[] }>(
+      queryClient.setQueryData<{ pages: Message[][]; pageParams: unknown[] }>(
         ['messages', channelId],
         (old) => {
           if (!old) return old;
           return {
             ...old,
-            pages: old.pages.map((page) => ({
-              ...page,
-              items: page.items.filter((m) => m.id !== message_id),
-            })),
+            pages: old.pages.map((page) => page.filter((m) => m.id !== message_id)),
           };
         },
       );

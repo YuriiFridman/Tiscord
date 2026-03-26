@@ -6,7 +6,7 @@ import { messagesApi } from '@/lib/api';
 import { useTyping } from '@/hooks/useTyping';
 import { queryClient } from '@/lib/queryClient';
 import { cn, formatFileSize } from '@/lib/utils';
-import type { PaginatedMessages } from '@/types';
+import type { Message } from '@/types';
 import TypingIndicator from './TypingIndicator';
 
 interface Props {
@@ -42,13 +42,13 @@ export default function MessageInput({ channelId, guildId, placeholder, onSend }
     },
     onSuccess: (msg) => {
       if (!onSend && msg) {
-        queryClient.setQueryData<{ pages: PaginatedMessages[]; pageParams: unknown[] }>(
+        queryClient.setQueryData<{ pages: Message[][]; pageParams: unknown[] }>(
           ['messages', channelId],
           (old) => {
             if (!old) return old;
             const pages = [...old.pages];
             const lastPage = pages[pages.length - 1];
-            pages[pages.length - 1] = { ...lastPage, items: [...lastPage.items, msg] };
+            pages[pages.length - 1] = [...lastPage, msg];
             return { ...old, pages };
           },
         );
