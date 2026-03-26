@@ -45,6 +45,20 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Light theme */
+[data-theme='light'] {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f2f3f5;
+  --bg-tertiary: #e3e5e8;
+  --bg-chat: #ffffff;
+  --text-primary: #2e3338;
+  --text-secondary: #4f5660;
+  --text-muted: #6d6f78;
+  --accent: #e94560;
+  --channel-text: #6d6f78;
+  --channel-hover: #2e3338;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;

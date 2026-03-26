@@ -2,15 +2,18 @@ import type {
   Channel,
   Category,
   DMThread,
+  FriendRequest,
   Guild,
   Invite,
   LoginRequest,
   Message,
+  NotificationSetting,
   RegisterRequest,
   Role,
   TokenResponse,
   User,
   VoiceParticipant,
+  Webhook,
 } from '../types';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000';
@@ -196,10 +199,10 @@ export const messagesApi = {
     const q = qs.toString() ? `?${qs}` : '';
     return request<Message[]>(`/channels/${channelId}/messages${q}`);
   },
-  send: (channelId: string, content: string) =>
+  send: (channelId: string, content: string, reply_to_id?: string) =>
     request<Message>(`/channels/${channelId}/messages`, {
       method: 'POST',
-      body: JSON.stringify({ content }),
+      body: JSON.stringify({ content, ...(reply_to_id ? { reply_to_id } : {}) }),
     }),
   edit: (channelId: string, messageId: string, content: string) =>
     request<Message>(`/channels/${channelId}/messages/${messageId}`, {
@@ -297,4 +300,69 @@ export const voiceApi = {
     request<void>(`/voice/channels/${channelId}/join`, { method: 'POST' }),
   leave: (channelId: string) =>
     request<void>(`/voice/channels/${channelId}/leave`, { method: 'POST' }),
+};
+
+// ─── Friends ──────────────────────────────────────────────────────────────────
+
+export const friendsApi = {
+  list: () => request<FriendRequest[]>('/friends'),
+  requests: () => request<FriendRequest[]>('/friends/requests'),
+  send: (receiverId: string) =>
+    request<FriendRequest>('/friends/requests', { method: 'POST', body: JSON.stringify({ receiver_id: receiverId }) }),
+  respond: (requestId: string, action: 'accept' | 'reject') =>
+    request<FriendRequest>(`/friends/requests/${requestId}`, { method: 'PATCH', body: JSON.stringify({ action }) }),
+  remove: (userId: string) => request<void>(`/friends/${userId}`, { method: 'DELETE' }),
+  blocked: () => request<FriendRequest[]>('/users/blocked'),
+  block: (userId: string) => request<void>(`/users/${userId}/block`, { method: 'POST' }),
+  unblock: (userId: string) => request<void>(`/users/${userId}/block`, { method: 'DELETE' }),
+};
+
+// ─── Pins ─────────────────────────────────────────────────────────────────────
+
+export const pinsApi = {
+  list: (channelId: string) => request<Message[]>(`/channels/${channelId}/pins`),
+  pin: (channelId: string, messageId: string) =>
+    request<void>(`/channels/${channelId}/messages/${messageId}/pin`, { method: 'POST' }),
+  unpin: (channelId: string, messageId: string) =>
+    request<void>(`/channels/${channelId}/messages/${messageId}/pin`, { method: 'DELETE' }),
+};
+
+// ─── Search ───────────────────────────────────────────────────────────────────
+
+export const searchApi = {
+  messages: (channelId: string, q: string, limit = 50) => {
+    const qs = new URLSearchParams({ q, limit: String(limit) });
+    return request<Message[]>(`/channels/${channelId}/messages/search?${qs}`);
+  },
+};
+
+// ─── Users extended ───────────────────────────────────────────────────────────
+
+export const usersExtApi = {
+  search: (q: string) => {
+    const qs = new URLSearchParams({ q });
+    return request<User[]>(`/users/search?${qs}`);
+  },
+  updateMe: (data: Partial<Pick<User, 'display_name' | 'avatar_url' | 'status' | 'custom_status' | 'bio'>>) =>
+    request<User>('/users/me', { method: 'PATCH', body: JSON.stringify(data) }),
+};
+
+// ─── Webhooks ─────────────────────────────────────────────────────────────────
+
+export const webhooksApi = {
+  list: (guildId: string) => request<Webhook[]>(`/guilds/${guildId}/webhooks`),
+  create: (guildId: string, data: { channel_id: string; name: string }) =>
+    request<Webhook>(`/guilds/${guildId}/webhooks`, { method: 'POST', body: JSON.stringify(data) }),
+  delete: (webhookId: string) => request<void>(`/webhooks/${webhookId}`, { method: 'DELETE' }),
+};
+
+// ─── Notifications ────────────────────────────────────────────────────────────
+
+export const notificationsApi = {
+  getGuild: (guildId: string) => request<NotificationSetting>(`/guilds/${guildId}/notification-settings`),
+  updateGuild: (guildId: string, data: { level?: string; muted?: boolean }) =>
+    request<NotificationSetting>(`/guilds/${guildId}/notification-settings`, { method: 'PUT', body: JSON.stringify(data) }),
+  getChannel: (channelId: string) => request<NotificationSetting>(`/channels/${channelId}/notification-settings`),
+  updateChannel: (channelId: string, data: { level?: string; muted?: boolean }) =>
+    request<NotificationSetting>(`/channels/${channelId}/notification-settings`, { method: 'PUT', body: JSON.stringify(data) }),
 };

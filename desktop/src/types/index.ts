@@ -7,6 +7,9 @@ export interface User {
   display_name: string;
   avatar_url: string | null;
   created_at: string;
+  status?: string;
+  custom_status?: string | null;
+  bio?: string | null;
 }
 
 export interface Guild {
@@ -22,9 +25,10 @@ export interface Channel {
   guild_id: string | null;
   category_id: string | null;
   name: string;
-  type: 'text' | 'voice' | 'dm' | 'group_dm';
+  type: 'text' | 'voice' | 'dm' | 'group_dm' | 'stage' | 'forum' | 'announcement';
   position: number;
   topic: string | null;
+  slowmode_delay?: number;
 }
 
 export interface Category {
@@ -44,6 +48,9 @@ export interface Message {
   reactions: Reaction[];
   created_at: string;
   updated_at: string;
+  reply_to_id?: string | null;
+  reply_to?: Message | null;
+  is_pinned?: boolean;
 }
 
 export interface Attachment {
@@ -93,7 +100,7 @@ export interface Invite {
   expires_at: string | null;
 }
 
-export type PresenceStatus = 'online' | 'idle' | 'offline';
+export type PresenceStatus = 'online' | 'idle' | 'dnd' | 'invisible' | 'offline';
 
 export interface WSEvent {
   event: string;
@@ -126,6 +133,36 @@ export interface RegisterRequest {
   username: string;
   email: string;
   password: string;
+}
+
+// ─── Social ───────────────────────────────────────────────────────────────────
+
+export interface FriendRequest {
+  id: string;
+  sender_id: string;
+  receiver_id: string;
+  status: 'pending' | 'accepted' | 'blocked';
+  created_at: string;
+  sender?: User;
+  receiver?: User;
+}
+
+export interface Webhook {
+  id: string;
+  guild_id: string;
+  channel_id: string;
+  creator_id: string | null;
+  name: string;
+  avatar_url: string | null;
+  created_at: string;
+}
+
+export interface NotificationSetting {
+  id: string;
+  user_id: string;
+  level: 'all_messages' | 'only_mentions' | 'nothing' | 'default';
+  muted: boolean;
+  created_at: string;
 }
 
 // ─── Voice state ──────────────────────────────────────────────────────────────

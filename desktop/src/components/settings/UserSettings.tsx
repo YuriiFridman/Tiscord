@@ -16,6 +16,7 @@ export default function UserSettings({ onClose }: Props) {
   const { user, logout, setUser } = useAuthStore();
   const [displayName, setDisplayName] = useState(user?.display_name ?? '');
   const [error, setError] = useState('');
+  const [isLight, setIsLight] = useState(document.documentElement.getAttribute('data-theme') === 'light');
 
   const save = useMutation({
     mutationFn: () => usersApi.updateMe({ display_name: displayName }),
@@ -29,6 +30,16 @@ export default function UserSettings({ onClose }: Props) {
   const handleLogout = async () => {
     await logout();
     onClose();
+  };
+
+  const toggleTheme = () => {
+    if (isLight) {
+      document.documentElement.removeAttribute('data-theme');
+      setIsLight(false);
+    } else {
+      document.documentElement.setAttribute('data-theme', 'light');
+      setIsLight(true);
+    }
   };
 
   return (
@@ -49,6 +60,29 @@ export default function UserSettings({ onClose }: Props) {
               maxLength={100}
               style={{ background: 'var(--bg-primary)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-primary)' }}
             />
+          </div>
+
+          {/* Appearance section */}
+          <div>
+            <label className="text-xs font-semibold uppercase mb-2 block" style={{ color: 'var(--text-muted)' }}>
+              {t('settings.appearance')}
+            </label>
+            <div className="flex items-center justify-between">
+              <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                {isLight ? t('theme.light') : t('theme.dark')}
+              </span>
+              <button
+                onClick={toggleTheme}
+                className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus-visible:outline-none"
+                style={{ background: isLight ? 'var(--accent)' : 'var(--bg-tertiary)' }}
+                aria-label={t('theme.toggle')}
+              >
+                <span
+                  className="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+                  style={{ transform: isLight ? 'translateX(24px)' : 'translateX(4px)' }}
+                />
+              </button>
+            </div>
           </div>
 
           {error && <p className="text-sm" style={{ color: 'var(--danger)' }}>{error}</p>}
@@ -79,3 +113,5 @@ export default function UserSettings({ onClose }: Props) {
     </Dialog>
   );
 }
+
+

@@ -14,14 +14,126 @@ interface Props {
   message: Message;
   channelId: string;
   isGrouped?: boolean;
+  onReply?: (message: Message) => void;
 }
 
-export default function MessageItem({ message, channelId, isGrouped = false }: Props) {
+// ─── Simple inline markdown renderer ─────────────────────────────────────────
+
+function renderMarkdown(text: string): React.ReactNode {
+  // Split off code blocks first
+  const codeBlockRegex = /```([\s\S]*?)```/g;
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = codeBlockRegex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(...renderInline(text.slice(lastIndex, match.index), `pre-${match.index}`));
+    }
+    parts.push(
+      <pre
+        key={`code-${match.index}`}
+        className="my-1 rounded px-3 py-2 text-xs overflow-x-auto"
+        style={{ background: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
+      >
+        <code>{match[1].trim()}</code>
+      </pre>,
+    );
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < text.length) {
+    parts.push(...renderInline(text.slice(lastIndex), `tail-${lastIndex}`));
+  }
+
+  return <>{parts}</>;
+}
+
+function renderInline(text: string, keyPrefix: string): React.ReactNode[] {
+  // Pattern order matters: bold, italic, strikethrough, code, url
+  const tokenRegex =
+    /(\*\*|__)(.+?)\1|(\*|_)(.+?)\3|(~~)(.+?)\5|(`[^`]+`)|((https?:\/\/)[^\s]+)/g;
+
+  const nodes: React.ReactNode[] = [];
+  let last = 0;
+  let m: RegExpExecArray | null;
+
+  while ((m = tokenRegex.exec(text)) !== null) {
+    if (m.index > last) nodes.push(text.slice(last, m.index));
+
+    if (m[1]) {
+      nodes.push(<strong key={`${keyPrefix}-b-${m.index}`}>{m[2]}</strong>);
+    } else if (m[3]) {
+      nodes.push(<em key={`${keyPrefix}-i-${m.index}`}>{m[4]}</em>);
+    } else if (m[5]) {
+      nodes.push(<del key={`${keyPrefix}-s-${m.index}`}>{m[6]}</del>);
+    } else if (m[7]) {
+      nodes.push(
+        <code
+          key={`${keyPrefix}-c-${m.index}`}
+          className="rounded px-1 py-0.5 text-xs font-mono"
+          style={{ background: 'var(--bg-tertiary)' }}
+        >
+          {m[7].slice(1, -1)}
+        </code>,
+      );
+    } else if (m[8]) {
+      nodes.push(
+        <a
+          key={`${keyPrefix}-u-${m.index}`}
+          href={m[8]}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline hover:opacity-80"
+          style={{ color: 'var(--accent)' }}
+        >
+          {m[8]}
+        </a>,
+      );
+    }
+
+    last = m.index + m[0].length;
+  }
+
+  if (last < text.length) nodes.push(text.slice(last));
+  return nodes;
+}
+
+// ─── Emoji Picker ─────────────────────────────────────────────────────────────
+
+const COMMON_EMOJIS = ['👍', '👎', '❤️', '😂', '😮', '😢', '🔥', '🎉', '🤔', '👀'];
+
+function EmojiPicker({ onPick, onClose }: { onPick: (emoji: string) => void; onClose: () => void }) {
+  return (
+    <div
+      className="absolute right-0 top-8 z-10 rounded-lg p-2 shadow-lg"
+      style={{ background: 'var(--bg-primary)', border: '1px solid rgba(255,255,255,0.1)' }}
+    >
+      <div className="flex gap-1">
+        {COMMON_EMOJIS.map((emoji) => (
+          <button
+            key={emoji}
+            onClick={() => { onPick(emoji); onClose(); }}
+            className="rounded p-1 text-lg hover:bg-white/10 transition-colors"
+            title={emoji}
+          >
+            {emoji}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── MessageItem ──────────────────────────────────────────────────────────────
+
+export default function MessageItem({ message, channelId, isGrouped = false, onReply }: Props) {
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const [editing, setEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
   const [hovering, setHovering] = useState(false);
+  const [showEmoji, setShowEmoji] = useState(false);
 
   const editMutation = useMutation({
     mutationFn: (content: string) => messagesApi.edit(channelId, message.id, content),
@@ -94,7 +206,7 @@ export default function MessageItem({ message, channelId, isGrouped = false }: P
     <div
       className={cn('group relative flex gap-3 px-4 py-0.5 hover:bg-white/5', !isGrouped && 'mt-4 pt-1')}
       onMouseEnter={() => setHovering(true)}
-      onMouseLeave={() => setHovering(false)}
+      onMouseLeave={() => { setHovering(false); setShowEmoji(false); }}
     >
       {/* Avatar or spacer */}
       <div className="w-10 shrink-0">
@@ -117,6 +229,23 @@ export default function MessageItem({ message, channelId, isGrouped = false }: P
 
       {/* Content */}
       <div className="flex-1 min-w-0">
+        {/* Reply preview */}
+        {message.reply_to && (
+          <div
+            className="mb-1 flex items-center gap-1.5 rounded px-2 py-1 text-xs border-l-2"
+            style={{
+              background: 'var(--bg-tertiary)',
+              borderColor: 'var(--text-muted)',
+              color: 'var(--text-muted)',
+            }}
+          >
+            <span className="font-semibold" style={{ color: 'var(--text-secondary)' }}>
+              {message.reply_to.author.display_name || message.reply_to.author.username}
+            </span>
+            <span className="truncate max-w-xs">{message.reply_to.content}</span>
+          </div>
+        )}
+
         {!isGrouped && (
           <div className="flex items-baseline gap-2 mb-0.5">
             <span className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
@@ -125,6 +254,9 @@ export default function MessageItem({ message, channelId, isGrouped = false }: P
             <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
               {formatTime(message.created_at)}
             </span>
+            {message.is_pinned && (
+              <span className="text-[11px]" title={t('pins.title')}>📌</span>
+            )}
           </div>
         )}
 
@@ -149,14 +281,14 @@ export default function MessageItem({ message, channelId, isGrouped = false }: P
             </div>
           </form>
         ) : (
-          <p className="text-sm break-words whitespace-pre-wrap" style={{ color: 'var(--text-primary)' }}>
-            {message.content}
+          <div className="text-sm break-words whitespace-pre-wrap" style={{ color: 'var(--text-primary)' }}>
+            {renderMarkdown(message.content)}
             {message.is_edited && (
               <span className="ml-1 text-[11px]" style={{ color: 'var(--text-muted)' }}>
                 {t('messages.edited')}
               </span>
             )}
-          </p>
+          </div>
         )}
 
         {/* Attachments */}
@@ -216,30 +348,63 @@ export default function MessageItem({ message, channelId, isGrouped = false }: P
       </div>
 
       {/* Action buttons */}
-      {hovering && isOwn && !editing && (
+      {hovering && !editing && (
         <div
           className="absolute right-4 top-0 flex gap-1 rounded p-1"
           style={{ background: 'var(--bg-primary)' }}
         >
+          {/* Emoji picker button */}
+          <div className="relative">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 px-2 text-xs"
+              onClick={() => setShowEmoji((v) => !v)}
+              title={t('messages.react')}
+            >
+              +
+            </Button>
+            {showEmoji && (
+              <EmojiPicker
+                onPick={(emoji) => reactMutation.mutate({ emoji, me: false })}
+                onClose={() => setShowEmoji(false)}
+              />
+            )}
+          </div>
+
+          {/* Reply button */}
           <Button
             size="sm"
             variant="ghost"
             className="h-7 px-2 text-xs"
-            onClick={() => { setEditing(true); setEditContent(message.content); }}
+            onClick={() => onReply?.(message)}
           >
-            {t('messages.edit')}
+            {t('messages.reply')}
           </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-7 px-2 text-xs"
-            style={{ color: 'var(--danger)' }}
-            onClick={() => {
-              if (confirm(t('messages.delete_confirm'))) deleteMutation.mutate();
-            }}
-          >
-            {t('messages.delete')}
-          </Button>
+
+          {isOwn && (
+            <>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 px-2 text-xs"
+                onClick={() => { setEditing(true); setEditContent(message.content); }}
+              >
+                {t('messages.edit')}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 px-2 text-xs"
+                style={{ color: 'var(--danger)' }}
+                onClick={() => {
+                  if (confirm(t('messages.delete_confirm'))) deleteMutation.mutate();
+                }}
+              >
+                {t('messages.delete')}
+              </Button>
+            </>
+          )}
         </div>
       )}
     </div>

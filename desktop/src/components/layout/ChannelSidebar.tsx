@@ -263,12 +263,38 @@ function ChannelRow({ channel, isActive, onClick }: { channel: Channel; isActive
       )}
       style={{ color: isActive ? 'var(--channel-hover)' : 'var(--channel-text)' }}
     >
-      {channel.type === 'voice' ? <VoiceIcon /> : <HashIcon />}
+      {channel.type === 'voice' ? <VoiceIcon /> : channel.type === 'stage' ? <StageIcon /> : channel.type === 'forum' ? <ForumIcon /> : channel.type === 'announcement' ? <AnnouncementIcon /> : <HashIcon />}
       <span className="truncate">{channel.name}</span>
     </button>
   );
 }
 
+function StageIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
+      <circle cx="12" cy="11" r="3" />
+      <path d="M6.8 19a6 6 0 0110.4 0" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M3 6.8a10 10 0 0118 0" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M4.9 15a8 8 0 0014.2 0" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+function ForumIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
+      <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" strokeLinecap="round" strokeLinejoin="round"/>
+      <line x1="9" y1="10" x2="15" y2="10"/><line x1="9" y1="14" x2="13" y2="14"/>
+    </svg>
+  );
+}
+function AnnouncementIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
+      <path d="M22 8s-4 2-10 2S2 8 2 8v8s4-2 10-2 10 2 10 2V8z" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M6 18v2" strokeLinecap="round"/>
+    </svg>
+  );
+}
 function HashIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">

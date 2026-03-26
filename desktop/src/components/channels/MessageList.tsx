@@ -11,11 +11,12 @@ import MessageItem from './MessageItem';
 interface Props {
   channelId: string;
   guildId: string;
+  onReply?: (message: Message) => void;
 }
 
 const PAGE_SIZE = 50;
 
-export default function MessageList({ channelId }: Props) {
+export default function MessageList({ channelId, onReply }: Props) {
   const { t } = useTranslation();
   const bottomRef = useRef<HTMLDivElement>(null);
   const topRef = useRef<HTMLDivElement>(null);
@@ -209,6 +210,7 @@ export default function MessageList({ channelId }: Props) {
                 message={message}
                 channelId={channelId}
                 isGrouped={isGrouped}
+                onReply={onReply}
               />
             </div>
           );

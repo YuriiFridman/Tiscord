@@ -14,6 +14,8 @@ interface Props {
   guildId: string | null;
   placeholder?: string;
   onSend?: (content: string) => Promise<void>;
+  replyTo?: Message | null;
+  onCancelReply?: () => void;
 }
 
 const MAX_FILE_SIZE = 8 * 1024 * 1024; // 8MB
@@ -23,7 +25,7 @@ interface PendingFile {
   file: File;
 }
 
-export default function MessageInput({ channelId, guildId, placeholder, onSend }: Props) {
+export default function MessageInput({ channelId, guildId, placeholder, onSend, replyTo, onCancelReply }: Props) {
   const { t } = useTranslation();
   const [content, setContent] = useState('');
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
@@ -37,7 +39,7 @@ export default function MessageInput({ channelId, guildId, placeholder, onSend }
       if (onSend) {
         await onSend(text);
       } else {
-        return messagesApi.send(channelId, text);
+        return messagesApi.send(channelId, text, replyTo?.id ?? undefined);
       }
     },
     onSuccess: (msg) => {
@@ -53,6 +55,7 @@ export default function MessageInput({ channelId, guildId, placeholder, onSend }
           },
         );
       }
+      onCancelReply?.();
     },
   });
 
@@ -66,7 +69,6 @@ export default function MessageInput({ channelId, guildId, placeholder, onSend }
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setContent(e.target.value);
     onKeystroke();
-    // Auto-resize textarea
     const el = textareaRef.current;
     if (el) {
       el.style.height = 'auto';
@@ -109,6 +111,25 @@ export default function MessageInput({ channelId, guildId, placeholder, onSend }
       {/* Typing indicator */}
       <TypingIndicator channelId={channelId} />
 
+      {/* Reply preview bar */}
+      {replyTo && (
+        <div
+          className="mb-1 flex items-center justify-between rounded-t px-3 py-1.5 text-xs"
+          style={{ background: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}
+        >
+          <span>
+            {t('messages.replying_to', { name: replyTo.author.display_name || replyTo.author.username })}
+            {' '}
+            <span className="truncate max-w-[200px] inline-block align-bottom" style={{ color: 'var(--text-secondary)' }}>
+              {replyTo.content}
+            </span>
+          </span>
+          <button onClick={onCancelReply} className="ml-2 hover:opacity-70" aria-label={t('common.cancel')}>
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* File error */}
       {fileError && (
         <p className="mb-1 text-xs" style={{ color: 'var(--danger)' }}>{fileError}</p>
@@ -139,7 +160,7 @@ export default function MessageInput({ channelId, guildId, placeholder, onSend }
 
       {/* Input area */}
       <div
-        className="flex items-end gap-2 rounded-lg px-3 py-2"
+        className={cn('flex items-end gap-2 rounded-lg px-3 py-2', replyTo && 'rounded-t-none')}
         style={{ background: 'var(--bg-tertiary)' }}
       >
         {/* Attach button */}
@@ -193,3 +214,5 @@ export default function MessageInput({ channelId, guildId, placeholder, onSend }
     </div>
   );
 }
+
+

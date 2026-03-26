@@ -10,6 +10,7 @@ import UserPanel from './UserPanel';
 import ChannelView from '@/components/channels/ChannelView';
 import DMList from '@/components/dm/DMList';
 import DMView from '@/components/dm/DMView';
+import FriendsPanel from '@/components/social/FriendsPanel';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { queryClient } from '@/lib/queryClient';
 import ErrorBoundary from '@/components/ErrorBoundary';
@@ -19,6 +20,7 @@ type ActiveView = { type: 'guild'; guildId: string; channelId: string | null } |
 export default function AppLayout() {
   const { t } = useTranslation();
   const [view, setView] = useState<ActiveView>({ type: 'dm', channelId: null });
+  const [showFriends, setShowFriends] = useState(false);
 
   const { data: guilds = [] } = useQuery({
     queryKey: ['guilds'],
@@ -77,6 +79,7 @@ export default function AppLayout() {
   }
 
   function selectChannel(channelId: string) {
+    setShowFriends(false);
     if (view.type === 'guild') {
       setView({ ...view, channelId });
     } else {
@@ -86,6 +89,7 @@ export default function AppLayout() {
 
   function goToDMs() {
     setView({ type: 'dm', channelId: null });
+    setShowFriends(false);
   }
 
   const activeGuild = guilds.find((g) => g.id === guildId);
@@ -115,10 +119,28 @@ export default function AppLayout() {
               onLeaveGuild={goToDMs}
             />
           ) : (
-            <DMList
-              selectedChannelId={view.channelId}
-              onSelect={selectChannel}
-            />
+            <>
+              {/* Friends button */}
+              <button
+                onClick={() => { setShowFriends((v) => !v); setView({ type: 'dm', channelId: null }); }}
+                className="mx-2 mt-3 mb-1 flex items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors hover:bg-white/5"
+                style={{
+                  color: showFriends ? 'var(--text-primary)' : 'var(--text-secondary)',
+                  background: showFriends ? 'var(--bg-tertiary)' : undefined,
+                  fontWeight: showFriends ? 600 : undefined,
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" strokeLinecap="round" /><circle cx="9" cy="7" r="4" />
+                  <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" strokeLinecap="round" />
+                </svg>
+                {t('friends.title')}
+              </button>
+              <DMList
+                selectedChannelId={view.channelId}
+                onSelect={selectChannel}
+              />
+            </>
           )}
           <UserPanel />
         </div>
@@ -134,6 +156,8 @@ export default function AppLayout() {
               )
             ) : view.type === 'dm' && view.channelId ? (
               <DMView dmId={view.channelId} />
+            ) : showFriends ? (
+              <FriendsPanel />
             ) : (
               <BlankState label={view.type === 'guild' ? t('channel.text') : t('nav.direct_messages')} />
             )}

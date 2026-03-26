@@ -1,19 +1,38 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useMutation } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/auth';
 import { usePresenceStore } from '@/store/presence';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { getInitials } from '@/lib/utils';
+import { usersExtApi } from '@/lib/api';
 import UserSettings from '@/components/settings/UserSettings';
+import type { PresenceStatus } from '@/types';
 
 export default function UserPanel() {
   const { t } = useTranslation();
-  const { user } = useAuthStore();
+  const { user, setUser } = useAuthStore();
   const getStatus = usePresenceStore((s) => s.getStatus);
+  const setStatus = usePresenceStore((s) => s.setStatus);
   const [isMuted, setIsMuted] = useState(false);
   const [isDeafened, setIsDeafened] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+
+  const updateStatusMutation = useMutation({
+    mutationFn: (status: string) => usersExtApi.updateMe({ status }),
+    onSuccess: (updated) => {
+      setUser(updated);
+      if (user) setStatus(user.id, updated.status as PresenceStatus ?? 'online');
+    },
+  });
 
   if (!user) return null;
 
@@ -22,36 +41,74 @@ export default function UserPanel() {
   const statusColor: Record<string, string> = {
     online: 'var(--online)',
     idle: 'var(--idle)',
+    dnd: 'var(--danger)',
+    invisible: 'var(--offline)',
     offline: 'var(--offline)',
   };
+
+  const statusOptions: { value: PresenceStatus; label: string }[] = [
+    { value: 'online', label: t('status.online') },
+    { value: 'idle', label: t('status.idle') },
+    { value: 'dnd', label: t('status.dnd') },
+    { value: 'invisible', label: t('status.invisible') },
+  ];
 
   return (
     <div
       className="flex items-center gap-2 px-2 py-2 border-t border-white/5"
       style={{ background: 'var(--bg-secondary)' }}
     >
-      {/* Avatar + name */}
+      {/* Avatar + name + status dropdown */}
       <div className="relative flex-1 flex items-center gap-2 min-w-0">
-        <div className="relative">
-          <Avatar className="h-8 w-8">
-            {user.avatar_url && <AvatarImage src={user.avatar_url} alt={user.display_name} />}
-            <AvatarFallback className="text-xs">{getInitials(user.display_name)}</AvatarFallback>
-          </Avatar>
-          <span
-            className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2"
-            style={{
-              background: statusColor[status] ?? statusColor.offline,
-              borderColor: 'var(--bg-secondary)',
-            }}
-          />
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="relative shrink-0 rounded-full focus-visible:outline-none hover:opacity-90 transition-opacity">
+              <Avatar className="h-8 w-8">
+                {user.avatar_url && <AvatarImage src={user.avatar_url} alt={user.display_name} />}
+                <AvatarFallback className="text-xs">{getInitials(user.display_name)}</AvatarFallback>
+              </Avatar>
+              <span
+                className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2"
+                style={{
+                  background: statusColor[status] ?? statusColor.offline,
+                  borderColor: 'var(--bg-secondary)',
+                }}
+              />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="top" align="start" className="w-44">
+            <div className="px-2 py-1.5 text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
+              {t('status.set_status')}
+            </div>
+            <DropdownMenuSeparator />
+            {statusOptions.map((opt) => (
+              <DropdownMenuItem
+                key={opt.value}
+                onClick={() => updateStatusMutation.mutate(opt.value)}
+              >
+                <span
+                  className="mr-2 h-2.5 w-2.5 rounded-full shrink-0"
+                  style={{ background: statusColor[opt.value] }}
+                />
+                {opt.label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
             {user.display_name}
           </p>
-          <p className="truncate text-xs" style={{ color: 'var(--text-muted)' }}>
-            @{user.username}
-          </p>
+          {user.custom_status ? (
+            <p className="truncate text-xs" style={{ color: 'var(--text-muted)' }}>
+              {user.custom_status}
+            </p>
+          ) : (
+            <p className="truncate text-xs" style={{ color: 'var(--text-muted)' }}>
+              @{user.username}
+            </p>
+          )}
         </div>
       </div>
 
@@ -137,3 +194,4 @@ function SettingsIcon() {
     </svg>
   );
 }
+
