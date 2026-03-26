@@ -13,7 +13,7 @@ export default function ChannelView({ channel, guild }: Props) {
   const { t } = useTranslation();
 
   if (channel.type === 'voice') {
-    return <VoiceChannel channel={channel} guild={guild} />;
+    return <VoiceChannel channelId={channel.id} channelName={channel.name} />;
   }
 
   return (

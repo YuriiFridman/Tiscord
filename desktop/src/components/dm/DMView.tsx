@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { dmsApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
@@ -17,17 +17,11 @@ interface Props {
 export default function DMView({ dmId }: Props) {
   const { t } = useTranslation();
   const { user } = useAuthStore();
-  const qc = useQueryClient();
   const [callActive, setCallActive] = useState(false);
 
   const { data: dm } = useQuery<DMThread>({
     queryKey: ['dm', dmId],
     queryFn: () => dmsApi.get(dmId),
-  });
-
-  const addParticipant = useMutation({
-    mutationFn: (userId: string) => dmsApi.addParticipant(dmId, userId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['dm', dmId] }),
   });
 
   if (!dm) return null;
@@ -88,7 +82,7 @@ export default function DMView({ dmId }: Props) {
       <div className="flex flex-1 overflow-hidden">
         <div className="flex flex-col flex-1 overflow-hidden">
           <MessageList channelId={dm.channel_id} guildId="" />
-          <MessageInput channelId={dm.channel_id} />
+          <MessageInput channelId={dm.channel_id} guildId={null} />
         </div>
 
         {/* Participants panel for group DMs */}

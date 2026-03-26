@@ -200,12 +200,11 @@ export default function MessageItem({ message, channelId, isGrouped = false }: P
                 onClick={() => reactMutation.mutate({ emoji: reaction.emoji, me: reaction.me })}
                 className={cn(
                   'flex items-center gap-1 rounded px-2 py-0.5 text-sm transition-colors',
-                  reaction.me ? 'ring-1' : 'hover:bg-white/10',
+                  reaction.me ? 'ring-1 ring-[var(--accent)]' : 'hover:bg-white/10',
                 )}
                 style={{
                   background: reaction.me ? 'rgba(233,69,96,0.15)' : 'var(--bg-tertiary)',
                   color: 'var(--text-primary)',
-                  ringColor: 'var(--accent)',
                 }}
               >
                 <span>{reaction.emoji}</span>

@@ -113,8 +113,8 @@ export default function AppLayout() {
             />
           ) : (
             <DMList
-              activeChannelId={view.channelId}
-              onSelectDM={selectChannel}
+              selectedChannelId={view.channelId}
+              onSelect={selectChannel}
             />
           )}
           <UserPanel />
@@ -131,7 +131,7 @@ export default function AppLayout() {
               <BlankState label={t('common.loading')} />
             )
           ) : view.type === 'dm' && view.channelId ? (
-            <DMView channelId={view.channelId} />
+            <DMView dmId={view.channelId} />
           ) : (
             <BlankState label={view.type === 'guild' ? t('channel.text') : t('nav.direct_messages')} />
           )}

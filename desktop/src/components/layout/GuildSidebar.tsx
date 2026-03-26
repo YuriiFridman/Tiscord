@@ -98,7 +98,7 @@ export default function GuildSidebar({ guilds, activeGuildId, onSelectGuild, onS
         <TooltipContent side="right">{t('guild.join_via_invite')}</TooltipContent>
       </Tooltip>
 
-      {showCreate && <CreateGuildModal onClose={() => setShowCreate(false)} />}
+      {showCreate && <CreateGuildModal open={showCreate} onClose={() => setShowCreate(false)} />}
       {showInvite && <InviteModal mode="join" onClose={() => setShowInvite(false)} />}
     </div>
   );

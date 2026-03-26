@@ -9,7 +9,7 @@ import UserSettings from '@/components/settings/UserSettings';
 
 export default function UserPanel() {
   const { t } = useTranslation();
-  const { user, logout } = useAuthStore();
+  const { user } = useAuthStore();
   const getStatus = usePresenceStore((s) => s.getStatus);
   const [isMuted, setIsMuted] = useState(false);
   const [isDeafened, setIsDeafened] = useState(false);

@@ -1,5 +1,4 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
 import { useWebSocketStore } from '@/store/ws';
 import { useAuthStore } from '@/store/auth';
 
@@ -16,7 +15,6 @@ interface TypingUser {
 }
 
 export default function TypingIndicator({ channelId }: Props) {
-  const { t } = useTranslation();
   const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
   const currentUserId = useAuthStore((s) => s.user?.id);
   const { on, off } = useWebSocketStore.getState();

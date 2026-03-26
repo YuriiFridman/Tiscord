@@ -1,7 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { messagesApi } from '@/lib/api';
 import { useWebSocketStore } from '@/store/ws';
 import { queryClient } from '@/lib/queryClient';
@@ -16,7 +15,7 @@ interface Props {
 
 const PAGE_SIZE = 50;
 
-export default function MessageList({ channelId, guildId }: Props) {
+export default function MessageList({ channelId }: Props) {
   const { t } = useTranslation();
   const bottomRef = useRef<HTMLDivElement>(null);
   const topRef = useRef<HTMLDivElement>(null);
