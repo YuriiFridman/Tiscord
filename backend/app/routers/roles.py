@@ -526,7 +526,7 @@ async def bulk_assign_role(guild_id: uuid.UUID, body: RoleBulkAssignPayload, db:
     role = await _get_role_or_404(db, guild_id, body.role_id)
     await _ensure_manageable_role(db, guild_id, current_user, role)
 
-    unique_user_ids = {uid for uid in body.user_ids}
+    unique_user_ids = set(body.user_ids)
     for user_id in unique_user_ids:
         await require_member(db, guild_id, user_id)
         existing = await db.execute(
@@ -556,7 +556,7 @@ async def bulk_remove_role(guild_id: uuid.UUID, body: RoleBulkAssignPayload, db:
     role = await _get_role_or_404(db, guild_id, body.role_id)
     await _ensure_manageable_role(db, guild_id, current_user, role)
 
-    unique_user_ids = {uid for uid in body.user_ids}
+    unique_user_ids = set(body.user_ids)
     await db.execute(
         delete(MemberRole).where(
             MemberRole.guild_id == guild_id,
@@ -573,17 +573,6 @@ async def bulk_remove_role(guild_id: uuid.UUID, body: RoleBulkAssignPayload, db:
         role.id,
     )
     await db.commit()
-
-
-@router.delete("/guilds/{guild_id}/roles/bulk-remove", status_code=status.HTTP_204_NO_CONTENT)
-async def bulk_remove_role_alias(
-    guild_id: uuid.UUID,
-    body: RoleBulkAssignPayload,
-    db: DbDep,
-    current_user: CurrentUser,
-):
-    await bulk_remove_role(guild_id, body, db, current_user)
-
 
 @router.get("/guilds/{guild_id}/roles/audit", response_model=list[RoleAuditLogOut])
 async def list_role_audit_logs(guild_id: uuid.UUID, db: DbDep, current_user: CurrentUser):

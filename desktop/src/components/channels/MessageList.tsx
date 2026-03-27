@@ -69,7 +69,7 @@ export default function MessageList({ channelId, onReply }: Props) {
     if (isNearBottom) {
       bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // containerRef and bottomRef are stable React refs and intentionally omitted from deps
   }, [lastMessageId]);
 
   // Intersection observer for infinite scroll

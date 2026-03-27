@@ -94,9 +94,10 @@ async def respond_to_friend_request(request_id: uuid.UUID, body: dict, db: DbDep
     if action == "accept":
         req.status = FriendStatus.accepted
     else:
+        rejected_payload = FriendRequestOut.model_validate(req)
         await db.delete(req)
         await db.commit()
-        return FriendRequestOut.model_validate(req)
+        return rejected_payload
 
     await db.commit()
     result = await db.execute(

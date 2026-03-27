@@ -81,7 +81,8 @@ async def lifespan(app: FastAPI):
                         command.stamp(cfg, "head")
                 sync_engine.dispose()
             except Exception:
-                # If we can't connect (e.g. fresh DB), just proceed with upgrade
+                # Connection failed (e.g. fresh DB not yet created); proceed so
+                # that the subsequent `command.upgrade` can initialise the schema.
                 pass
 
             command.upgrade(cfg, "head")

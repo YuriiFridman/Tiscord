@@ -51,7 +51,9 @@ async def create_message(channel_id: uuid.UUID, body: MessageCreate, db: DbDep, 
         from app.models.message import Attachment
 
         for att_id in body.attachment_ids:
-            att_result = await db.execute(select(Attachment).where(Attachment.id == att_id, Attachment.message_id == None))  # noqa: E711
+            att_result = await db.execute(
+                select(Attachment).where(Attachment.id == att_id, Attachment.message_id.is_(None))
+            )
             att = att_result.scalar_one_or_none()
             if att:
                 att.message_id = msg.id

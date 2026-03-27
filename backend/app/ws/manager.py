@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import uuid
 from collections import defaultdict
 from typing import Any
@@ -8,6 +9,8 @@ from typing import Any
 from fastapi import WebSocket
 
 from app.ws.events import WSEvent
+
+logger = logging.getLogger(__name__)
 
 
 class Connection:
@@ -22,8 +25,8 @@ class Connection:
     async def send(self, data: dict) -> None:
         try:
             await self.websocket.send_json(data)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("WebSocket send failed for user %s: %s", self.user_id, exc)
 
 
 class ConnectionManager:
