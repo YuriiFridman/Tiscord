@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/auth';
-import { usersExtApi } from '@/lib/api';
+import { usersApi } from '@/lib/api';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,7 +26,7 @@ export default function UserSettings({ onClose }: Props) {
   const [selectedOutput, setSelectedOutput] = useState(localStorage.getItem('voice_output_device_id') ?? '');
 
   const save = useMutation({
-    mutationFn: () => usersExtApi.updateMe({ display_name: displayName.trim(), custom_status: customStatus.trim() || null, bio: bio.trim() || null }),
+    mutationFn: () => usersApi.updateMe(buildProfilePayload(displayName, customStatus, bio)),
     onSuccess: (updated) => {
       setUser(updated);
       setError('');
@@ -68,7 +68,17 @@ export default function UserSettings({ onClose }: Props) {
     };
   }, []);
 
-  const canSaveProfile = useMemo(() => !!displayName.trim(), [displayName]);
+  const canSaveProfile = useMemo(() => {
+    if (!displayName.trim()) return false;
+    const nextDisplay = displayName.trim();
+    const nextCustom = customStatus.trim() || null;
+    const nextBio = bio.trim() || null;
+    return (
+      nextDisplay !== (user?.display_name ?? '') ||
+      nextCustom !== (user?.custom_status ?? null) ||
+      nextBio !== (user?.bio ?? null)
+    );
+  }, [bio, customStatus, displayName, user?.bio, user?.custom_status, user?.display_name]);
 
   const saveAudioSettings = () => {
     localStorage.setItem('voice_input_device_id', selectedInput);
@@ -171,7 +181,7 @@ export default function UserSettings({ onClose }: Props) {
                 >
                   <option value="">{t('settings.default_device')}</option>
                   {inputDevices.map((d) => (
-                    <option key={d.deviceId} value={d.deviceId}>{d.label || t('settings.audio_input')}</option>
+                    <option key={d.deviceId} value={d.deviceId}>{d.label || `${t('settings.unknown_input_device')} (${d.deviceId.slice(0, 8)})`}</option>
                   ))}
                 </select>
               </div>
@@ -187,7 +197,7 @@ export default function UserSettings({ onClose }: Props) {
                 >
                   <option value="">{t('settings.default_device')}</option>
                   {outputDevices.map((d) => (
-                    <option key={d.deviceId} value={d.deviceId}>{d.label || t('settings.audio_output')}</option>
+                    <option key={d.deviceId} value={d.deviceId}>{d.label || `${t('settings.unknown_output_device')} (${d.deviceId.slice(0, 8)})`}</option>
                   ))}
                 </select>
               </div>
@@ -230,4 +240,12 @@ export default function UserSettings({ onClose }: Props) {
       </DialogContent>
     </Dialog>
   );
+}
+
+function buildProfilePayload(displayName: string, customStatus: string, bio: string) {
+  return {
+    display_name: displayName.trim(),
+    custom_status: customStatus.trim() || null,
+    bio: bio.trim() || null,
+  };
 }

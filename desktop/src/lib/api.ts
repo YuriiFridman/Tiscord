@@ -157,7 +157,7 @@ export const authApi = {
 
 export const usersApi = {
   getById: (id: string) => request<User>(`/users/${id}`),
-  updateMe: (data: Partial<Pick<User, 'display_name' | 'avatar_url'>>) =>
+  updateMe: (data: Partial<Pick<User, 'display_name' | 'avatar_url' | 'status' | 'custom_status' | 'bio'>>) =>
     request<User>('/users/me', { method: 'PATCH', body: JSON.stringify(data) }),
 };
 
@@ -279,7 +279,7 @@ export const rolesApi = {
   delete: (guildId: string, roleId: string) =>
     request<void>(`/guilds/${guildId}/roles/${roleId}`, { method: 'DELETE' }),
   assignToMember: (guildId: string, roleId: string, userId: string) =>
-    request<{ guild_id: string; role_id: string; user_id: string }>(
+    request<MemberRole>(
       `/guilds/${guildId}/roles/${roleId}/members/${userId}`,
       { method: 'POST' },
     ),
@@ -347,14 +347,13 @@ export const searchApi = {
 };
 
 // ─── Users extended ───────────────────────────────────────────────────────────
-
 export const usersExtApi = {
   search: (q: string) => {
     const qs = new URLSearchParams({ q });
     return request<User[]>(`/users/search?${qs}`);
   },
   updateMe: (data: Partial<Pick<User, 'display_name' | 'avatar_url' | 'status' | 'custom_status' | 'bio'>>) =>
-    request<User>('/users/me', { method: 'PATCH', body: JSON.stringify(data) }),
+    usersApi.updateMe(data),
 };
 
 // ─── Webhooks ─────────────────────────────────────────────────────────────────

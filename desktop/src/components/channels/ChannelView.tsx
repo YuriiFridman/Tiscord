@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import type { Channel, Guild, GuildMember, MemberRole, Message, Role } from '@/types';
@@ -224,26 +224,15 @@ function MemberGroups({
     existing.push(role);
   }
 
-  const statusOf = (member: GuildMember) => {
-    const runtimeStatus = getStatus(member.user_id);
-    if (runtimeStatus !== 'offline') return runtimeStatus;
-    return member.user.status ?? 'offline';
-  };
+  const statusOf = (member: GuildMember) => getEffectiveStatus(member, getStatus);
 
   const isOnlineLike = (member: GuildMember) => {
     const status = statusOf(member);
     return status === 'online' || status === 'idle' || status === 'dnd';
   };
 
-  const groupedOnlineByRole = hoistedRoles.map((role) => ({
-    role,
-    members: guildMembers.filter((m) => isOnlineLike(m) && (rolesByUser.get(m.user_id) ?? []).some((r) => r.id === role.id)),
-  })).filter((g) => g.members.length > 0);
-
-  const groupedOfflineByRole = hoistedRoles.map((role) => ({
-    role,
-    members: guildMembers.filter((m) => !isOnlineLike(m) && (rolesByUser.get(m.user_id) ?? []).some((r) => r.id === role.id)),
-  })).filter((g) => g.members.length > 0);
+  const groupedOnlineByRole = groupMembersByHoistedRole(hoistedRoles, guildMembers, rolesByUser, (m) => isOnlineLike(m));
+  const groupedOfflineByRole = groupMembersByHoistedRole(hoistedRoles, guildMembers, rolesByUser, (m) => !isOnlineLike(m));
 
   const onlineUngrouped = guildMembers.filter((m) => {
     if (!isOnlineLike(m)) return false;
@@ -254,16 +243,25 @@ function MemberGroups({
     return !(rolesByUser.get(m.user_id) ?? []).some((r) => r.hoist && !r.is_default);
   });
 
+  const onlineCount = useMemo(
+    () => groupedOnlineByRole.reduce((acc, group) => acc + group.members.length, 0) + onlineUngrouped.length,
+    [groupedOnlineByRole, onlineUngrouped.length],
+  );
+  const offlineCount = useMemo(
+    () => groupedOfflineByRole.reduce((acc, group) => acc + group.members.length, 0) + offlineUngrouped.length,
+    [groupedOfflineByRole, offlineUngrouped.length],
+  );
+
   return (
     <div className="space-y-4">
-      <MemberSection title={`${onlineLabel} — ${groupedOnlineByRole.reduce((a, b) => a + b.members.length, 0) + onlineUngrouped.length}`}>
+      <MemberSection title={`${onlineLabel} — ${onlineCount}`}>
         {groupedOnlineByRole.map((group) => (
           <RoleGroup key={group.role.id} roleName={group.role.name} members={group.members} getStatus={getStatus} />
         ))}
         {onlineUngrouped.length > 0 && <RoleGroup roleName={membersLabel} members={onlineUngrouped} getStatus={getStatus} />}
       </MemberSection>
 
-      <MemberSection title={`${offlineLabel} — ${groupedOfflineByRole.reduce((a, b) => a + b.members.length, 0) + offlineUngrouped.length}`}>
+      <MemberSection title={`${offlineLabel} — ${offlineCount}`}>
         {groupedOfflineByRole.map((group) => (
           <RoleGroup key={group.role.id} roleName={group.role.name} members={group.members} getStatus={getStatus} />
         ))}
@@ -308,8 +306,7 @@ function RoleGroup({
       </div>
       <div className="space-y-1">
         {members.map((member) => {
-          const liveStatus = getStatus(member.user_id);
-          const status = liveStatus === 'offline' ? (member.user.status ?? 'offline') : liveStatus;
+          const status = getEffectiveStatus(member, getStatus);
           return (
             <div key={member.user_id} className="flex items-center gap-2 rounded px-2 py-1" style={{ background: 'var(--bg-tertiary)' }}>
               <span className="h-2 w-2 rounded-full" style={{ background: statusColor[status] ?? statusColor.offline }} />
@@ -322,4 +319,23 @@ function RoleGroup({
       </div>
     </div>
   );
+}
+
+function getEffectiveStatus(member: GuildMember, getStatus: (userId: string) => string): string {
+  const liveStatus = getStatus(member.user_id);
+  return liveStatus === 'offline' ? (member.user.status ?? 'offline') : liveStatus;
+}
+
+function groupMembersByHoistedRole(
+  hoistedRoles: Role[],
+  members: GuildMember[],
+  rolesByUser: Map<string, Role[]>,
+  predicate: (member: GuildMember) => boolean,
+): Array<{ role: Role; members: GuildMember[] }> {
+  return hoistedRoles
+    .map((role) => ({
+      role,
+      members: members.filter((m) => predicate(m) && (rolesByUser.get(m.user_id) ?? []).some((r) => r.id === role.id)),
+    }))
+    .filter((group) => group.members.length > 0);
 }
