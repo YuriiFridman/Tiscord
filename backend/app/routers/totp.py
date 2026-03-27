@@ -34,7 +34,7 @@ async def setup_2fa(db: DbDep, current_user: CurrentUser):
     await db.commit()
 
     totp = pyotp.TOTP(secret)
-    uri = totp.provisioning_uri(name=current_user.email, issuer_name="Tiscord")
+    uri = totp.provisioning_uri(name=current_user.email, issuer_name="Nexora")
 
     return TOTPSetupResponse(secret=secret, provisioning_uri=uri)
 

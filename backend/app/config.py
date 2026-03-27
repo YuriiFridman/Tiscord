@@ -9,7 +9,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
-    DATABASE_URL: str = "postgresql+asyncpg://user:pass@localhost/tiscord"
+    DATABASE_URL: str = "postgresql+asyncpg://user:pass@localhost/nexora"
 
     JWT_SECRET: str = "changeme-in-production"
     JWT_ACCESS_EXPIRE_MINUTES: int = 60

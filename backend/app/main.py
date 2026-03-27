@@ -95,9 +95,9 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Tiscord API",
+    title="Nexora API",
     version="1.0.0",
-    description="Backend API for Tiscord, a Discord-like application.",
+    description="Backend API for Nexora, a Discord-like application.",
     lifespan=lifespan,
 )
 

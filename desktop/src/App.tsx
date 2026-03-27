@@ -38,7 +38,7 @@ function AuthGuard() {
             className="w-12 h-12 rounded-full border-4 border-t-transparent animate-spin"
             style={{ borderColor: 'var(--accent)', borderTopColor: 'transparent' }}
           />
-          <span style={{ color: 'var(--text-secondary)' }}>Loading Tiscord…</span>
+          <span style={{ color: 'var(--text-secondary)' }}>Loading Nexora…</span>
         </div>
       </div>
     );
