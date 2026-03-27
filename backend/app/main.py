@@ -57,13 +57,26 @@ async def lifespan(app: FastAPI):
 
             try:
                 sync_engine = sqlalchemy.create_engine(db_url)
-                with sync_engine.connect():
+                with sync_engine.connect() as conn:
+                    inspector = sqlalchemy.inspect(conn)
                     # Check if alembic_version table exists
-                    has_alembic = sqlalchemy.inspect(sync_engine).has_table("alembic_version")
+                    has_alembic = inspector.has_table("alembic_version")
                     # Check if the schema is already populated (e.g. users table exists)
-                    has_users = sqlalchemy.inspect(sync_engine).has_table("users")
-                    if not has_alembic and has_users:
-                        # Tables already exist but Alembic hasn't tracked them yet.
+                    has_users = inspector.has_table("users")
+
+                    alembic_tracked = False
+                    if has_alembic:
+                        alembic_version_tbl = sqlalchemy.table(
+                            "alembic_version", sqlalchemy.column("version_num")
+                        )
+                        result = conn.execute(
+                            sqlalchemy.select(sqlalchemy.func.count()).select_from(alembic_version_tbl)
+                        )
+                        alembic_tracked = result.scalar() > 0
+
+                    if has_users and not alembic_tracked:
+                        # Tables already exist but Alembic hasn't tracked them yet
+                        # (either no alembic_version table, or the table is empty).
                         # Stamp the current head so Alembic only runs new migrations.
                         command.stamp(cfg, "head")
                 sync_engine.dispose()
