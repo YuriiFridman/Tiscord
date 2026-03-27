@@ -85,9 +85,25 @@ export interface Role {
   guild_id: string;
   name: string;
   color: number;
+  hoist: boolean;
   position: number;
   permissions: number;
   is_default: boolean;
+  created_at: string;
+}
+
+export interface GuildMember {
+  guild_id: string;
+  user_id: string;
+  joined_at: string;
+  nickname: string | null;
+  user: User;
+}
+
+export interface MemberRole {
+  guild_id: string;
+  user_id: string;
+  role_id: string;
 }
 
 export interface Invite {

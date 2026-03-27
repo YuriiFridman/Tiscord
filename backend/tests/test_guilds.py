@@ -99,3 +99,50 @@ async def test_delete_guild(client: AsyncClient):
     guild_id = guild["id"]
     response = await client.delete(f"/api/v1/guilds/{guild_id}", headers=auth_headers(token))
     assert response.status_code == 204
+
+
+@pytest.mark.asyncio
+async def test_member_roles_listing_and_assignment(client: AsyncClient):
+    owner_token, owner, guild = await setup_guild(client)
+    guild_id = guild["id"]
+
+    ch_resp = await client.post(
+        f"/api/v1/guilds/{guild_id}/channels",
+        json={"name": "general", "type": "text"},
+        headers=auth_headers(owner_token),
+    )
+    assert ch_resp.status_code == 201
+    channel_id = ch_resp.json()["id"]
+
+    role_resp = await client.post(
+        f"/api/v1/guilds/{guild_id}/roles",
+        json={"name": "Mods", "color": 123, "hoist": True, "position": 2, "permissions": 0},
+        headers=auth_headers(owner_token),
+    )
+    assert role_resp.status_code == 201
+    role_id = role_resp.json()["id"]
+
+    token2, user2 = await create_test_user(client, username="memberrolesjoiner", email="memberrolesjoiner@example.com")
+    inv_resp = await client.post(
+        "/api/v1/invites/",
+        json={"guild_id": guild_id, "channel_id": channel_id},
+        headers=auth_headers(owner_token),
+    )
+    assert inv_resp.status_code == 201
+    code = inv_resp.json()["code"]
+    accept_resp = await client.post(f"/api/v1/invites/{code}/accept", headers=auth_headers(token2))
+    assert accept_resp.status_code == 200
+
+    assign_resp = await client.post(
+        f"/api/v1/guilds/{guild_id}/roles/{role_id}/members/{user2['id']}",
+        headers=auth_headers(owner_token),
+    )
+    assert assign_resp.status_code == 201
+
+    member_roles_resp = await client.get(
+        f"/api/v1/guilds/{guild_id}/member-roles",
+        headers=auth_headers(owner_token),
+    )
+    assert member_roles_resp.status_code == 200
+    items = member_roles_resp.json()
+    assert any(mr["user_id"] == user2["id"] and mr["role_id"] == role_id for mr in items)
