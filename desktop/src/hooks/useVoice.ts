@@ -143,7 +143,11 @@ export function useVoice(): VoiceHookState {
   const joinChannel = useCallback(
     async (chId: string, user: User) => {
       currentUserRef.current = user;
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      const preferredInputId = localStorage.getItem('voice_input_device_id');
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: preferredInputId ? { deviceId: { exact: preferredInputId } } : true,
+        video: false,
+      });
       localStreamRef.current = stream;
       setLocalStream(stream);
       setChannelId(chId);

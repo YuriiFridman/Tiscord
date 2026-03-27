@@ -157,16 +157,13 @@ export default function MessageItem({ message, channelId, isGrouped = false, onR
   const deleteMutation = useMutation({
     mutationFn: () => messagesApi.delete(channelId, message.id),
     onSuccess: () => {
-      queryClient.setQueryData<{ pages: { items: Message[] }[] }>(
+      queryClient.setQueryData<{ pages: Message[][]; pageParams: (string | undefined)[] }>(
         ['messages', channelId],
         (old) => {
           if (!old) return old;
           return {
             ...old,
-            pages: old.pages.map((page) => ({
-              ...page,
-              items: page.items.filter((m) => m.id !== message.id),
-            })),
+            pages: old.pages.map((page) => page.filter((m) => m.id !== message.id)),
           };
         },
       );

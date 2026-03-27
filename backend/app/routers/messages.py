@@ -37,6 +37,11 @@ async def create_message(channel_id: uuid.UUID, body: MessageCreate, db: DbDep, 
 
     msg = Message(channel_id=channel_id, author_id=current_user.id, content=body.content)
     if body.reply_to_id is not None:
+        reply_target = await db.execute(
+            select(Message.id).where(Message.id == body.reply_to_id, Message.channel_id == channel_id)
+        )
+        if reply_target.scalar_one_or_none() is None:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Reply target message not found")
         msg.reply_to_id = body.reply_to_id
     db.add(msg)
     await db.flush()

@@ -7,7 +7,7 @@ from sqlalchemy import select
 
 from app.deps import CurrentUser, DbDep
 from app.models.role import MemberRole, Role
-from app.schemas.role import RoleCreate, RoleOut, RoleUpdate
+from app.schemas.role import MemberRoleOut, RoleCreate, RoleOut, RoleUpdate
 from app.services.guild import get_guild_or_404, require_member, require_permission
 from app.services.permissions import Permissions
 
@@ -19,6 +19,13 @@ async def list_roles(guild_id: uuid.UUID, db: DbDep, current_user: CurrentUser):
     await require_member(db, guild_id, current_user.id)
     result = await db.execute(select(Role).where(Role.guild_id == guild_id).order_by(Role.position))
     return [RoleOut.model_validate(r) for r in result.scalars().all()]
+
+
+@router.get("/guilds/{guild_id}/member-roles", response_model=list[MemberRoleOut])
+async def list_member_roles(guild_id: uuid.UUID, db: DbDep, current_user: CurrentUser):
+    await require_member(db, guild_id, current_user.id)
+    result = await db.execute(select(MemberRole).where(MemberRole.guild_id == guild_id))
+    return [MemberRoleOut.model_validate(mr) for mr in result.scalars().all()]
 
 
 @router.post("/guilds/{guild_id}/roles", response_model=RoleOut, status_code=status.HTTP_201_CREATED)

@@ -34,3 +34,11 @@ class RoleOut(BaseModel):
     permissions: int
     is_default: bool
     created_at: datetime
+
+
+class MemberRoleOut(BaseModel):
+    model_config = {"from_attributes": True}
+
+    guild_id: uuid.UUID
+    user_id: uuid.UUID
+    role_id: uuid.UUID

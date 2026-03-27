@@ -72,6 +72,31 @@ async def test_delete_message(client: AsyncClient):
 
 
 @pytest.mark.asyncio
+async def test_send_message_with_deleted_reply_target_returns_400(client: AsyncClient):
+    token, _, channel_id = await setup_channel(client, "replydeleted")
+    original_resp = await client.post(
+        f"/api/v1/channels/{channel_id}/messages",
+        json={"content": "Original"},
+        headers=auth_headers(token),
+    )
+    original_id = original_resp.json()["id"]
+
+    del_resp = await client.delete(
+        f"/api/v1/channels/{channel_id}/messages/{original_id}",
+        headers=auth_headers(token),
+    )
+    assert del_resp.status_code == 204
+
+    reply_resp = await client.post(
+        f"/api/v1/channels/{channel_id}/messages",
+        json={"content": "Reply to deleted", "reply_to_id": original_id},
+        headers=auth_headers(token),
+    )
+    assert reply_resp.status_code == 400
+    assert reply_resp.json()["detail"] == "Reply target message not found"
+
+
+@pytest.mark.asyncio
 async def test_message_pagination(client: AsyncClient):
     token, _, channel_id = await setup_channel(client, "page")
 
