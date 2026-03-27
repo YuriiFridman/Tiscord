@@ -157,7 +157,7 @@ export default function MessageItem({ message, channelId, isGrouped = false, onR
   const deleteMutation = useMutation({
     mutationFn: () => messagesApi.delete(channelId, message.id),
     onSuccess: () => {
-      queryClient.setQueryData<{ pages: Message[][]; pageParams: unknown[] }>(
+      queryClient.setQueryData<{ pages: Message[][]; pageParams: (string | undefined)[] }>(
         ['messages', channelId],
         (old) => {
           if (!old) return old;
