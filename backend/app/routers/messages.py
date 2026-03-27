@@ -166,7 +166,14 @@ async def get_pinned_messages(channel_id: uuid.UUID, db: DbDep, current_user: Cu
     result = await db.execute(
         select(Message)
         .where(Message.channel_id == channel_id, Message.is_pinned.is_(True))
-        .options(selectinload(Message.attachments), selectinload(Message.reactions), selectinload(Message.author))
+        .options(
+            selectinload(Message.attachments),
+            selectinload(Message.reactions),
+            selectinload(Message.author),
+            selectinload(Message.reply_to).selectinload(Message.attachments),
+            selectinload(Message.reply_to).selectinload(Message.reactions),
+            selectinload(Message.reply_to).selectinload(Message.author),
+        )
         .order_by(Message.created_at.desc())
     )
     msgs = result.scalars().all()
@@ -188,7 +195,14 @@ async def search_messages(
     query = (
         select(Message)
         .where(Message.channel_id == channel_id)
-        .options(selectinload(Message.attachments), selectinload(Message.reactions), selectinload(Message.author))
+        .options(
+            selectinload(Message.attachments),
+            selectinload(Message.reactions),
+            selectinload(Message.author),
+            selectinload(Message.reply_to).selectinload(Message.attachments),
+            selectinload(Message.reply_to).selectinload(Message.reactions),
+            selectinload(Message.reply_to).selectinload(Message.author),
+        )
         .order_by(Message.created_at.desc())
         .limit(limit)
     )

@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, HTTPException, status
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
@@ -13,6 +14,11 @@ from app.ws.events import WSEvent
 from app.ws.manager import manager
 
 router = APIRouter(prefix="/voice", tags=["voice"])
+
+
+class VoiceStateUpdateIn(BaseModel):
+    is_muted: bool | None = None
+    is_deafened: bool | None = None
 
 
 def _serialize_user(user) -> dict:
@@ -111,6 +117,39 @@ async def leave_voice_channel(channel_id: uuid.UUID, db: DbDep, current_user: Cu
                 "user": _serialize_user(current_user),
                 "is_muted": False,
                 "is_deafened": False,
+            },
+        )
+
+    return {"ok": True}
+
+
+@router.patch("/channels/{channel_id}/state", status_code=status.HTTP_200_OK)
+async def update_voice_state(channel_id: uuid.UUID, body: VoiceStateUpdateIn, db: DbDep, current_user: CurrentUser):
+    result = await db.execute(
+        select(VoiceSession)
+        .where(VoiceSession.channel_id == channel_id, VoiceSession.user_id == current_user.id)
+        .options(selectinload(VoiceSession.user), selectinload(VoiceSession.channel))
+    )
+    session = result.scalar_one_or_none()
+    if session is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Voice session not found")
+
+    if body.is_muted is not None:
+        session.is_muted = body.is_muted
+    if body.is_deafened is not None:
+        session.is_deafened = body.is_deafened
+    await db.commit()
+
+    if session.channel and session.channel.guild_id:
+        await manager.broadcast_to_guild(
+            session.channel.guild_id,
+            WSEvent.VOICE_STATE_UPDATE,
+            {
+                "channel_id": str(channel_id),
+                "action": "state",
+                "user": _serialize_user(session.user),
+                "is_muted": session.is_muted,
+                "is_deafened": session.is_deafened,
             },
         )
 

@@ -14,7 +14,14 @@ async def get_message_or_404(db: AsyncSession, message_id: uuid.UUID) -> Message
     result = await db.execute(
         select(Message)
         .where(Message.id == message_id)
-        .options(selectinload(Message.attachments), selectinload(Message.reactions), selectinload(Message.author))
+        .options(
+            selectinload(Message.attachments),
+            selectinload(Message.reactions),
+            selectinload(Message.author),
+            selectinload(Message.reply_to).selectinload(Message.attachments),
+            selectinload(Message.reply_to).selectinload(Message.reactions),
+            selectinload(Message.reply_to).selectinload(Message.author),
+        )
     )
     msg = result.scalar_one_or_none()
     if msg is None:
@@ -31,7 +38,14 @@ async def list_messages(
     query = (
         select(Message)
         .where(Message.channel_id == channel_id)
-        .options(selectinload(Message.attachments), selectinload(Message.reactions), selectinload(Message.author))
+        .options(
+            selectinload(Message.attachments),
+            selectinload(Message.reactions),
+            selectinload(Message.author),
+            selectinload(Message.reply_to).selectinload(Message.attachments),
+            selectinload(Message.reply_to).selectinload(Message.reactions),
+            selectinload(Message.reply_to).selectinload(Message.author),
+        )
         .order_by(Message.created_at.desc())
         .limit(limit)
     )

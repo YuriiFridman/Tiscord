@@ -97,6 +97,31 @@ async def test_send_message_with_deleted_reply_target_returns_400(client: AsyncC
 
 
 @pytest.mark.asyncio
+async def test_send_message_with_reply_returns_reply_preview(client: AsyncClient):
+    token, _, channel_id = await setup_channel(client, "replyok")
+    original_resp = await client.post(
+        f"/api/v1/channels/{channel_id}/messages",
+        json={"content": "Original"},
+        headers=auth_headers(token),
+    )
+    assert original_resp.status_code == 201
+    original_id = original_resp.json()["id"]
+
+    reply_resp = await client.post(
+        f"/api/v1/channels/{channel_id}/messages",
+        json={"content": "Reply", "reply_to_id": original_id},
+        headers=auth_headers(token),
+    )
+    assert reply_resp.status_code == 201
+    reply_data = reply_resp.json()
+    assert reply_data["reply_to_id"] == original_id
+    assert reply_data["reply_to"] is not None
+    assert reply_data["reply_to"]["id"] == original_id
+    assert reply_data["reply_to"]["content"] == "Original"
+    assert reply_data["reply_to"]["author"] is not None
+
+
+@pytest.mark.asyncio
 async def test_message_pagination(client: AsyncClient):
     token, _, channel_id = await setup_channel(client, "page")
 

@@ -325,6 +325,8 @@ export const voiceApi = {
     request<void>(`/voice/channels/${channelId}/join`, { method: 'POST' }),
   leave: (channelId: string) =>
     request<void>(`/voice/channels/${channelId}/leave`, { method: 'POST' }),
+  setState: (channelId: string, data: { is_muted?: boolean; is_deafened?: boolean }) =>
+    request<{ ok: boolean }>(`/voice/channels/${channelId}/state`, { method: 'PATCH', body: JSON.stringify(data) }),
 };
 
 // ─── Friends ──────────────────────────────────────────────────────────────────

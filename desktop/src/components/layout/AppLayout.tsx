@@ -15,6 +15,7 @@ import { useWebSocket } from '@/hooks/useWebSocket';
 import { queryClient } from '@/lib/queryClient';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { usePresenceStore } from '@/store/presence';
+import { check } from '@tauri-apps/plugin-updater';
 
 type ActiveView = { type: 'guild'; guildId: string; channelId: string | null } | { type: 'dm'; channelId: string | null };
 
@@ -28,6 +29,26 @@ export default function AppLayout() {
     queryKey: ['guilds'],
     queryFn: guildsApi.list,
   });
+
+  useEffect(() => {
+    let mounted = true;
+    const run = async () => {
+      try {
+        const update = await check();
+        if (!mounted || !update?.available) return;
+        // Keep it explicit for users before restarting to apply update.
+        const shouldInstall = window.confirm(t('common.update_available_install_now'));
+        if (!shouldInstall) return;
+        await update.downloadAndInstall();
+      } catch {
+        // no-op in web mode or when updater is not configured
+      }
+    };
+    run();
+    return () => {
+      mounted = false;
+    };
+  }, [t]);
 
   // Real-time guild list updates
   useWebSocket('GUILD_CREATE', (data) => {
