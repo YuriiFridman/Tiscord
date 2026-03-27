@@ -48,8 +48,11 @@ export default function InviteModal({ mode, guildId, onClose }: Props) {
     onError: (e: Error) => setError(e.message),
   });
 
+  const appUrl = import.meta.env.VITE_APP_URL as string | undefined;
   const inviteLink = invite
-    ? `${window.location.origin}/invite/${invite.code}`
+    ? appUrl
+      ? `${appUrl}/invite/${invite.code}`
+      : invite.code
     : '';
 
   const handleCopy = () => {
@@ -74,7 +77,7 @@ export default function InviteModal({ mode, guildId, onClose }: Props) {
               {invite ? (
                 <div className="space-y-2">
                   <label className="text-xs font-semibold uppercase mb-1 block" style={{ color: 'var(--text-muted)' }}>
-                    {t('guild.invite_link')}
+                    {appUrl ? t('guild.invite_link') : t('guild.invite_code')}
                   </label>
                   <div className="flex gap-2">
                     <Input

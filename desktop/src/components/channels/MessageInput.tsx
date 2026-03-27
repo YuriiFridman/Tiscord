@@ -160,14 +160,14 @@ export default function MessageInput({ channelId, guildId, placeholder, onSend, 
 
       {/* Input area */}
       <div
-        className={cn('flex items-end gap-2 rounded-lg px-3 py-2', replyTo && 'rounded-t-none')}
+        className={cn('flex items-center gap-2 rounded-lg px-3 py-2', replyTo && 'rounded-t-none')}
         style={{ background: 'var(--bg-tertiary)' }}
       >
         {/* Attach button */}
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="mb-1 shrink-0 opacity-60 hover:opacity-100 transition-opacity"
+          className="shrink-0 opacity-60 hover:opacity-100 transition-opacity"
           title={t('messages.attach_file')}
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="2">
@@ -200,7 +200,7 @@ export default function MessageInput({ channelId, guildId, placeholder, onSend, 
         {/* Send button */}
         <Button
           size="sm"
-          className="mb-0.5 shrink-0 h-8 w-8 p-0"
+          className="shrink-0 h-8 w-8 p-0"
           disabled={(!content.trim() && pendingFiles.length === 0) || sendMutation.isPending}
           onClick={handleSubmit}
           style={{ background: 'var(--accent)' }}

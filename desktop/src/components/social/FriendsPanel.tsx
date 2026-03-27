@@ -330,7 +330,7 @@ export default function FriendsPanel() {
               {t('friends.add_friend_placeholder')}
             </p>
             <div
-              className="flex gap-2 rounded-lg p-1"
+              className="flex items-center gap-2 rounded-lg p-1"
               style={{ background: 'var(--bg-tertiary)' }}
             >
               <Input

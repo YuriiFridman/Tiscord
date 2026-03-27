@@ -1,5 +1,6 @@
 import { useRef, useCallback, useEffect, useState } from 'react';
 import { useWebSocketStore } from '../store/ws';
+import { voiceApi } from '../lib/api';
 import type { VoiceParticipant, User } from '../types';
 
 const STUN_URLS = (import.meta.env.VITE_STUN_URLS ?? 'stun:stun.l.google.com:19302')
@@ -149,12 +150,16 @@ export function useVoice(): VoiceHookState {
       setInCall(true);
       setParticipants([{ user, is_muted: false, is_deafened: false }]);
 
+      // Register session on the backend and broadcast VOICE_STATE_UPDATE to guild members
+      await voiceApi.join(chId).catch(console.error);
+
       send('CALL_SIGNAL', { channel_id: chId, type: 'join' });
     },
     [send],
   );
 
   const leaveChannel = useCallback(() => {
+    const chId = channelId;
     localStreamRef.current?.getTracks().forEach((t) => t.stop());
     localStreamRef.current = null;
     peersRef.current.forEach(({ pc }) => pc.close());
@@ -163,15 +168,18 @@ export function useVoice(): VoiceHookState {
     setChannelId(null);
     setParticipants([]);
     setLocalStream(null);
-    if (channelId) send('CALL_SIGNAL', { channel_id: channelId, type: 'leave' });
+    if (chId) {
+      voiceApi.leave(chId).catch(console.error);
+      send('CALL_SIGNAL', { channel_id: chId, type: 'leave' });
+    }
   }, [channelId, send]);
 
   const toggleMute = useCallback(() => {
     const stream = localStreamRef.current;
     if (!stream) return;
-    const enabled = !isMuted;
-    stream.getAudioTracks().forEach((t) => { t.enabled = enabled; });
-    setIsMuted(!isMuted);
+    const newMuted = !isMuted;
+    stream.getAudioTracks().forEach((t) => { t.enabled = !newMuted; });
+    setIsMuted(newMuted);
   }, [isMuted]);
 
   const toggleDeafen = useCallback(() => {

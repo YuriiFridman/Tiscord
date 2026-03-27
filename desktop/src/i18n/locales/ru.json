@@ -11,7 +11,7 @@
     "welcome_back": "С возвращением!",
     "create_account": "Создать аккаунт",
     "login_subtitle": "Рады снова вас видеть",
-    "register_subtitle": "Присоединяйтесь к Tiscord",
+    "register_subtitle": "Присоединяйтесь к Nexora",
     "logging_in": "Вход…",
     "registering": "Регистрация…"
   },
@@ -108,6 +108,7 @@
   },
   "voice": {
     "call": "Звонок",
+    "join": "Присоединиться",
     "join_voice": "Войти в голосовой",
     "leave": "Покинуть",
     "mute": "Отключить микрофон",
@@ -118,7 +119,9 @@
     "participants": "Участники",
     "mesh_warning": "Внимание: больше 6 участников может снизить качество связи",
     "voice_limit_warning": "Приближаемся к лимиту ({{count}}/10 участников)",
-    "no_participants": "Никто не подключён"
+    "no_participants": "Никто не подключён",
+    "empty": "Никто не подключён",
+    "channelFull": "Канал заполнен"
   },
   "moderation": {
     "kick": "Выгнать",
