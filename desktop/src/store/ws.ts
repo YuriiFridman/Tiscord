@@ -18,14 +18,23 @@ interface WSState {
   _dispatch: (event: WSEvent) => void;
 }
 
+// Production backend WebSocket URL – update this if the deployment address ever changes.
+const FALLBACK_WS_URL = 'wss://nexoragg.up.railway.app/ws';
+
 // When VITE_WS_URL is set (e.g. Tauri production build) use that absolute URL.
-// Otherwise derive the URL from the current page origin so the app works when
-// the backend serves the frontend from the same host.
+// When explicitly set to "" (e.g. Docker build) derive the URL from the page
+// origin so the app works when the backend serves the frontend from the same
+// host.  When not defined at all, fall back to the production Railway endpoint
+// so the desktop app always has a working connection even without an env file.
 function resolveWsUrl(): string {
   const configured = import.meta.env.VITE_WS_URL;
-  if (configured) return configured;
-  const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
-  return `${proto}://${window.location.host}/ws`;
+  if (configured !== undefined) {
+    if (configured) return configured;
+    // Explicitly set to "" – derive from the current page origin.
+    const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    return `${proto}://${window.location.host}/ws`;
+  }
+  return FALLBACK_WS_URL;
 }
 
 const WS_URL = resolveWsUrl();

@@ -43,11 +43,15 @@ import type {
   UserConnectionInfo,
 } from '../types';
 
-// When VITE_API_URL is set (e.g. Tauri production build) use that absolute URL.
-// When not set, fall back to a relative path so the app works when the backend
-// serves the frontend from the same origin, or when the Vite dev-server proxy
-// forwards /api requests to localhost:8000.
-const API_URL = import.meta.env.VITE_API_URL ?? '';
+// Production backend URL – update this if the deployment address ever changes.
+const FALLBACK_API_URL = 'https://nexoragg.up.railway.app';
+
+// When VITE_API_URL is set use that absolute URL.
+// When not set (e.g. Tauri build without an .env.production file), fall back to
+// the production Railway deployment so login/registration always works.
+// Docker builds explicitly set VITE_API_URL="" so they continue to use relative
+// paths, which resolve correctly when the backend serves the frontend.
+const API_URL = import.meta.env.VITE_API_URL ?? FALLBACK_API_URL;
 const PREFIX = `${API_URL}/api/v1`;
 
 // ─── Token storage ────────────────────────────────────────────────────────────
