@@ -85,5 +85,19 @@ class ConnectionManager:
             {"user_id": str(user_id), "status": status},
         )
 
+    def get_online_users_for_guilds(self, guild_ids: set[uuid.UUID], exclude_user: uuid.UUID) -> list[uuid.UUID]:
+        """Return user IDs that are online and share at least one of the given guild IDs."""
+        online: list[uuid.UUID] = []
+        seen: set[uuid.UUID] = set()
+        for uid, conns in self._user_connections.items():
+            if uid == exclude_user or uid in seen:
+                continue
+            for conn in conns:
+                if conn.guild_ids & guild_ids:
+                    online.append(uid)
+                    seen.add(uid)
+                    break
+        return online
+
 
 manager = ConnectionManager()

@@ -16,12 +16,14 @@ import { queryClient } from '@/lib/queryClient';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { usePresenceStore } from '@/store/presence';
 import { check } from '@tauri-apps/plugin-updater';
+import type { PresenceStatus } from '@/types';
 
 type ActiveView = { type: 'guild'; guildId: string; channelId: string | null } | { type: 'dm'; channelId: string | null };
 
 export default function AppLayout() {
   const { t } = useTranslation();
   const setPresence = usePresenceStore((s) => s.setStatus);
+  const bulkSetPresence = usePresenceStore((s) => s.bulkSet);
   const [view, setView] = useState<ActiveView>({ type: 'dm', channelId: null });
   const [showFriends, setShowFriends] = useState(false);
 
@@ -163,6 +165,17 @@ export default function AppLayout() {
     const payload = data as { user_id: string; status: 'online' | 'idle' | 'dnd' | 'invisible' | 'offline' };
     if (!payload?.user_id) return;
     setPresence(payload.user_id, payload.status ?? 'offline');
+  });
+  useWebSocket('READY', (data) => {
+    const payload = data as { user_id: string; guild_ids: string[]; presence?: Array<{ user_id: string; status: string }> };
+    if (payload.presence?.length) {
+      bulkSetPresence(
+        payload.presence.map((p) => ({
+          userId: p.user_id,
+          status: (p.status ?? 'online') as PresenceStatus,
+        })),
+      );
+    }
   });
 
   // Auto-select first text channel when guild selected

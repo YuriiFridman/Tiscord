@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/auth';
@@ -15,6 +15,7 @@ import {
 import { getInitials } from '@/lib/utils';
 import { usersApi } from '@/lib/api';
 import UserSettings from '@/components/settings/UserSettings';
+import { useVoice } from '@/hooks/useVoice';
 import type { PresenceStatus } from '@/types';
 
 export default function UserPanel() {
@@ -22,9 +23,15 @@ export default function UserPanel() {
   const { user, setUser } = useAuthStore();
   const getStatus = usePresenceStore((s) => s.getStatus);
   const setStatus = usePresenceStore((s) => s.setStatus);
-  const [isMuted, setIsMuted] = useState(false);
-  const [isDeafened, setIsDeafened] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const voice = useVoice();
+
+  // Seed own presence status from user record on mount
+  useEffect(() => {
+    if (user?.id && user?.status) {
+      setStatus(user.id, (user.status as PresenceStatus) ?? 'online');
+    }
+  }, [user?.id, user?.status, setStatus]);
 
   const updateStatusMutation = useMutation({
     mutationFn: (status: string) => usersApi.updateMe({ status }),
@@ -37,6 +44,9 @@ export default function UserPanel() {
   if (!user) return null;
 
   const status = getStatus(user.id);
+
+  const isMuted = voice.isMuted;
+  const isDeafened = voice.isDeafened;
 
   const statusColor: Record<string, string> = {
     online: 'var(--online)',
@@ -114,32 +124,35 @@ export default function UserPanel() {
 
       {/* Controls */}
       <div className="flex items-center gap-1">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              onClick={() => setIsMuted((m) => !m)}
-              className="rounded p-1.5 transition-colors hover:bg-white/10"
-              style={{ color: isMuted ? 'var(--danger)' : 'var(--text-secondary)' }}
-            >
-              {isMuted ? <MicOffIcon /> : <MicIcon />}
-            </button>
-          </TooltipTrigger>
-          <TooltipContent>{isMuted ? t('voice.unmute') : t('voice.mute')}</TooltipContent>
-        </Tooltip>
+        {voice.inCall && (
+          <>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={voice.toggleMute}
+                  className="rounded p-1.5 transition-colors hover:bg-white/10"
+                  style={{ color: isMuted ? 'var(--danger)' : 'var(--text-secondary)' }}
+                >
+                  {isMuted ? <MicOffIcon /> : <MicIcon />}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>{isMuted ? t('voice.unmute') : t('voice.mute')}</TooltipContent>
+            </Tooltip>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              onClick={() => setIsDeafened((d) => !d)}
-              className="rounded p-1.5 transition-colors hover:bg-white/10"
-              style={{ color: isDeafened ? 'var(--danger)' : 'var(--text-secondary)' }}
-            >
-              {isDeafened ? <HeadphonesOffIcon /> : <HeadphonesIcon />}
-            </button>
-          </TooltipTrigger>
-          <TooltipContent>{isDeafened ? t('voice.undeafen') : t('voice.deafen')}</TooltipContent>
-        </Tooltip>
-
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={voice.toggleDeafen}
+                  className="rounded p-1.5 transition-colors hover:bg-white/10"
+                  style={{ color: isDeafened ? 'var(--danger)' : 'var(--text-secondary)' }}
+                >
+                  {isDeafened ? <HeadphonesOffIcon /> : <HeadphonesIcon />}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>{isDeafened ? t('voice.undeafen') : t('voice.deafen')}</TooltipContent>
+            </Tooltip>
+          </>
+        )}
         <Tooltip>
           <TooltipTrigger asChild>
             <button
