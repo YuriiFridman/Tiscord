@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, status
+from pydantic import BaseModel
 from sqlalchemy import select
 
 from app.deps import CurrentUser, DbDep
@@ -14,9 +15,15 @@ from app.services.auth import (
     hash_password,
     revoke_refresh_token,
     rotate_refresh_token,
+    verify_password,
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
 
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
@@ -85,3 +92,16 @@ async def logout(body: LogoutRequest, db: DbDep):
 @router.get("/me", response_model=UserOut)
 async def me(current_user: CurrentUser):
     return UserOut.model_validate(current_user)
+
+
+@router.post("/change-password", status_code=status.HTTP_204_NO_CONTENT)
+async def change_password(body: ChangePasswordRequest, db: DbDep, current_user: CurrentUser):
+    if not verify_password(body.current_password, current_user.password_hash):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Current password is incorrect")
+    if len(body.new_password) < 6:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password must be at least 6 characters",
+        )
+    current_user.password_hash = hash_password(body.new_password)
+    await db.commit()

@@ -129,3 +129,21 @@ body {
 }
 .typing-dot:nth-child(2) { animation-delay: 0.2s; }
 .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+/* ─── Member list hover states ──────────────────────────────────────────────── */
+
+.member-row {
+  cursor: pointer;
+}
+.member-row:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+[data-theme='light'] .member-row:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+/* Active / pressed member row */
+.member-row:active {
+  background: rgba(255, 255, 255, 0.1);
+}

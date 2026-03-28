@@ -19,14 +19,17 @@ from app.routers import (
     auth,
     channels,
     dms,
+    features,
     guilds,
     invites,
     messages,
     moderation,
     notifications,
+    read_state,
     roles,
     social,
     totp,
+    user_notes,
     users,
     voice,
     webhooks,
@@ -134,6 +137,9 @@ app.include_router(social.router, prefix=API_PREFIX)
 app.include_router(webhooks.router, prefix=API_PREFIX)
 app.include_router(notifications.router, prefix=API_PREFIX)
 app.include_router(totp.router, prefix=API_PREFIX)
+app.include_router(user_notes.router, prefix=API_PREFIX)
+app.include_router(read_state.router, prefix=API_PREFIX)
+app.include_router(features.router, prefix=API_PREFIX)
 
 
 @app.get("/health")
@@ -186,12 +192,19 @@ async def websocket_endpoint(websocket: WebSocket, token: str = Query(...)):
             if event == "TYPING_START":
                 channel_id = data.get("data", {}).get("channel_id")
                 guild_id = data.get("data", {}).get("guild_id")
+                dm_thread_id = data.get("data", {}).get("dm_thread_id")
                 if guild_id and channel_id:
                     await manager.broadcast_to_guild(
                         uuid.UUID(guild_id),
                         WSEvent.TYPING_START,
                         {"channel_id": channel_id, "user_id": str(user_id)},
                         exclude_user=user_id,
+                    )
+                elif dm_thread_id:
+                    await manager.broadcast_to_dm(
+                        uuid.UUID(dm_thread_id),
+                        WSEvent.TYPING_START,
+                        {"dm_thread_id": dm_thread_id, "user_id": str(user_id)},
                     )
 
             elif event == "CALL_SIGNAL":

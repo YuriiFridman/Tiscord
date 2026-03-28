@@ -8,6 +8,7 @@ import { messagesApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import { queryClient } from '@/lib/queryClient';
 import { cn, formatTime, getInitials, formatFileSize } from '@/lib/utils';
+import UserProfileCard from '@/components/user/UserProfileCard';
 import type { Message } from '@/types';
 
 interface Props {
@@ -133,6 +134,7 @@ export default function MessageItem({ message, channelId, isGrouped = false, onR
   const [editContent, setEditContent] = useState(message.content);
   const [hovering, setHovering] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
 
   const editMutation = useMutation({
     mutationFn: (content: string) => messagesApi.edit(channelId, message.id, content),
@@ -202,14 +204,19 @@ export default function MessageItem({ message, channelId, isGrouped = false, onR
       onMouseLeave={() => { setHovering(false); setShowEmoji(false); }}
     >
       {/* Avatar or spacer */}
-      <div className="w-10 shrink-0">
+      <div className="w-10 shrink-0 relative">
         {!isGrouped ? (
-          <Avatar className="h-10 w-10">
-            {message.author.avatar_url && <AvatarImage src={message.author.avatar_url} />}
-            <AvatarFallback style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}>
-              {getInitials(message.author.display_name || message.author.username)}
-            </AvatarFallback>
-          </Avatar>
+          <button
+            className="focus-visible:outline-none"
+            onClick={() => setShowProfile((v) => !v)}
+          >
+            <Avatar className="h-10 w-10 cursor-pointer hover:opacity-80 transition-opacity">
+              {message.author.avatar_url && <AvatarImage src={message.author.avatar_url} />}
+              <AvatarFallback style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}>
+                {getInitials(message.author.display_name || message.author.username)}
+              </AvatarFallback>
+            </Avatar>
+          </button>
         ) : (
           <span
             className="invisible text-[10px] leading-10 group-hover:visible"
@@ -217,6 +224,14 @@ export default function MessageItem({ message, channelId, isGrouped = false, onR
           >
             {formatTime(message.created_at)}
           </span>
+        )}
+        {showProfile && (
+          <div className="absolute left-12 top-0">
+            <UserProfileCard
+              user={message.author}
+              onClose={() => setShowProfile(false)}
+            />
+          </div>
         )}
       </div>
 

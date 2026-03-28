@@ -7,9 +7,11 @@ import MessageList from './MessageList';
 import MessageInput from './MessageInput';
 import MessageSearch from './MessageSearch';
 import VoiceChannel from '@/components/voice/VoiceChannel';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { formatTime } from '@/lib/utils';
+import { formatTime, getInitials, roleColorToHex } from '@/lib/utils';
 import { usePresenceStore } from '@/store/presence';
+import UserProfileCard from '@/components/user/UserProfileCard';
 
 interface Props {
   channel: Channel;
@@ -50,8 +52,8 @@ export default function ChannelView({ channel, guild }: Props) {
       <div className="flex flex-1 flex-col min-w-0">
         {/* Channel header */}
         <div
-          className="flex h-12 shrink-0 items-center gap-2 border-b border-white/5 px-4 shadow-sm"
-          style={{ background: 'var(--bg-primary)' }}
+          className="flex h-12 shrink-0 items-center gap-2 border-b px-4 shadow-sm"
+          style={{ background: 'var(--bg-primary)', borderColor: 'rgba(255,255,255,0.06)' }}
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2">
             <line x1="4" y1="9" x2="20" y2="9" /><line x1="4" y1="15" x2="20" y2="15" />
@@ -112,12 +114,12 @@ export default function ChannelView({ channel, guild }: Props) {
       {/* Pins panel */}
       {showPins && (
         <div
-          className="flex h-full w-80 shrink-0 flex-col border-l border-white/5"
-          style={{ background: 'var(--bg-secondary)' }}
+          className="flex h-full w-80 shrink-0 flex-col border-l"
+          style={{ background: 'var(--bg-secondary)', borderColor: 'rgba(255,255,255,0.06)' }}
         >
           <div
-            className="flex h-12 shrink-0 items-center justify-between border-b border-white/5 px-4"
-            style={{ background: 'var(--bg-primary)' }}
+            className="flex h-12 shrink-0 items-center justify-between border-b px-4"
+            style={{ background: 'var(--bg-primary)', borderColor: 'rgba(255,255,255,0.06)' }}
           >
             <span className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
               📌 {t('pins.title')}
@@ -168,18 +170,10 @@ export default function ChannelView({ channel, guild }: Props) {
 
       {/* Members panel */}
       <div
-        className="flex h-full w-72 shrink-0 flex-col border-l border-white/5"
-        style={{ background: 'var(--bg-secondary)' }}
+        className="flex h-full w-60 shrink-0 flex-col border-l"
+        style={{ background: 'var(--bg-secondary)', borderColor: 'rgba(255,255,255,0.06)' }}
       >
-        <div
-          className="flex h-12 shrink-0 items-center justify-between border-b border-white/5 px-4"
-          style={{ background: 'var(--bg-primary)' }}
-        >
-          <span className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
-            {t('guild.members')} — {guildMembers.length}
-          </span>
-        </div>
-        <ScrollArea className="flex-1 p-3">
+        <ScrollArea className="flex-1 pt-4 px-2">
           <MemberGroups
             guildMembers={guildMembers}
             roles={roles}
@@ -187,7 +181,6 @@ export default function ChannelView({ channel, guild }: Props) {
             getStatus={getStatus}
             onlineLabel={t('status.online')}
             offlineLabel={t('status.offline')}
-            membersLabel={t('guild.members')}
           />
         </ScrollArea>
       </div>
@@ -202,7 +195,6 @@ function MemberGroups({
   getStatus,
   onlineLabel,
   offlineLabel,
-  membersLabel,
 }: {
   guildMembers: GuildMember[];
   roles: Role[];
@@ -210,7 +202,6 @@ function MemberGroups({
   getStatus: (userId: string) => string;
   onlineLabel: string;
   offlineLabel: string;
-  membersLabel: string;
 }) {
   const hoistedRoles = roles.filter((r) => r.hoist && !r.is_default).sort((a, b) => b.position - a.position);
   const rolesByUser = new Map<string, Role[]>();
@@ -229,6 +220,12 @@ function MemberGroups({
   const isOnlineLike = (member: GuildMember) => {
     const status = statusOf(member);
     return status === 'online' || status === 'idle' || status === 'dnd';
+  };
+
+  // Get the top (highest position) role for coloring the member name
+  const getTopRole = (member: GuildMember): Role | undefined => {
+    const userRoles = (rolesByUser.get(member.user_id) ?? []).filter((r) => !r.is_default);
+    return userRoles.sort((a, b) => b.position - a.position)[0];
   };
 
   const groupedOnlineByRole = groupMembersByHoistedRole(hoistedRoles, guildMembers, rolesByUser, (m) => isOnlineLike(m));
@@ -253,44 +250,125 @@ function MemberGroups({
   );
 
   return (
-    <div className="space-y-4">
-      <MemberSection title={`${onlineLabel} — ${onlineCount}`}>
-        {groupedOnlineByRole.map((group) => (
-          <RoleGroup key={group.role.id} roleName={group.role.name} members={group.members} getStatus={getStatus} />
-        ))}
-        {onlineUngrouped.length > 0 && <RoleGroup roleName={membersLabel} members={onlineUngrouped} getStatus={getStatus} />}
-      </MemberSection>
+    <div className="space-y-2">
+      {/* Online section */}
+      {onlineCount > 0 && (
+        <>
+          {groupedOnlineByRole.map((group) => (
+            <MemberSection
+              key={group.role.id}
+              title={`${group.role.name} — ${group.members.length}`}
+              roleColor={group.role.color}
+            >
+              {group.members.map((member) => (
+                <MemberItem
+                  key={member.user_id}
+                  member={member}
+                  getStatus={getStatus}
+                  topRole={getTopRole(member)}
+                  isOffline={false}
+                />
+              ))}
+            </MemberSection>
+          ))}
+          {onlineUngrouped.length > 0 && (
+            <MemberSection title={`${onlineLabel} — ${onlineUngrouped.length}`}>
+              {onlineUngrouped.map((member) => (
+                <MemberItem
+                  key={member.user_id}
+                  member={member}
+                  getStatus={getStatus}
+                  topRole={getTopRole(member)}
+                  isOffline={false}
+                />
+              ))}
+            </MemberSection>
+          )}
+        </>
+      )}
 
-      <MemberSection title={`${offlineLabel} — ${offlineCount}`}>
-        {groupedOfflineByRole.map((group) => (
-          <RoleGroup key={group.role.id} roleName={group.role.name} members={group.members} getStatus={getStatus} />
-        ))}
-        {offlineUngrouped.length > 0 && <RoleGroup roleName={membersLabel} members={offlineUngrouped} getStatus={getStatus} />}
-      </MemberSection>
+      {/* Offline section */}
+      {offlineCount > 0 && (
+        <>
+          {groupedOfflineByRole.map((group) => (
+            <MemberSection
+              key={`off-${group.role.id}`}
+              title={`${group.role.name} — ${group.members.length}`}
+              roleColor={group.role.color}
+            >
+              {group.members.map((member) => (
+                <MemberItem
+                  key={member.user_id}
+                  member={member}
+                  getStatus={getStatus}
+                  topRole={getTopRole(member)}
+                  isOffline
+                />
+              ))}
+            </MemberSection>
+          ))}
+          {offlineUngrouped.length > 0 && (
+            <MemberSection title={`${offlineLabel} — ${offlineUngrouped.length}`}>
+              {offlineUngrouped.map((member) => (
+                <MemberItem
+                  key={member.user_id}
+                  member={member}
+                  getStatus={getStatus}
+                  topRole={getTopRole(member)}
+                  isOffline
+                />
+              ))}
+            </MemberSection>
+          )}
+        </>
+      )}
     </div>
   );
 }
 
-function MemberSection({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <div>
-      <div className="mb-1 text-xs font-semibold uppercase" style={{ color: 'var(--text-muted)' }}>
-        {title}
-      </div>
-      <div className="space-y-2">{children}</div>
-    </div>
-  );
-}
-
-function RoleGroup({
-  roleName,
-  members,
-  getStatus,
+function MemberSection({
+  title,
+  children,
+  roleColor,
 }: {
-  roleName: string;
-  members: GuildMember[];
-  getStatus: (userId: string) => string;
+  title: string;
+  children: ReactNode;
+  roleColor?: number;
 }) {
+  return (
+    <div className="mb-1">
+      <div
+        className="flex items-center gap-1.5 px-2 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-wide select-none"
+        style={{ color: 'var(--text-muted)' }}
+      >
+        {roleColor != null && roleColor !== 0 && (
+          <span
+            className="inline-block h-2 w-2 rounded-full shrink-0"
+            style={{ background: roleColorToHex(roleColor) }}
+          />
+        )}
+        <span>{title}</span>
+      </div>
+      <div>{children}</div>
+    </div>
+  );
+}
+
+function MemberItem({
+  member,
+  getStatus,
+  topRole,
+  isOffline,
+}: {
+  member: GuildMember;
+  getStatus: (userId: string) => string;
+  topRole?: Role;
+  isOffline: boolean;
+}) {
+  const [showProfile, setShowProfile] = useState(false);
+  const status = getEffectiveStatus(member, getStatus);
+  const displayName = member.nickname || member.user.display_name || member.user.username;
+
   const statusColor: Record<string, string> = {
     online: 'var(--online)',
     idle: 'var(--idle)',
@@ -299,24 +377,64 @@ function RoleGroup({
     offline: 'var(--offline)',
   };
 
+  const nameColor = topRole && topRole.color !== 0
+    ? roleColorToHex(topRole.color)
+    : 'var(--text-primary)';
+
   return (
-    <div>
-      <div className="mb-1 text-[11px] font-semibold uppercase" style={{ color: 'var(--text-muted)' }}>
-        {roleName} — {members.length}
-      </div>
-      <div className="space-y-1">
-        {members.map((member) => {
-          const status = getEffectiveStatus(member, getStatus);
-          return (
-            <div key={member.user_id} className="flex items-center gap-2 rounded px-2 py-1" style={{ background: 'var(--bg-tertiary)' }}>
-              <span className="h-2 w-2 rounded-full" style={{ background: statusColor[status] ?? statusColor.offline }} />
-              <span className="truncate text-sm" style={{ color: 'var(--text-primary)' }}>
-                {member.nickname || member.user.display_name || member.user.username}
-              </span>
-            </div>
-          );
-        })}
-      </div>
+    <div className="relative">
+      <button
+        onClick={() => setShowProfile((v) => !v)}
+        className="member-row flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left transition-colors duration-100"
+        style={{ opacity: isOffline ? 0.45 : 1 }}
+      >
+        {/* Avatar with status badge */}
+        <div className="relative shrink-0">
+          <Avatar className="h-8 w-8">
+            {member.user.avatar_url && <AvatarImage src={member.user.avatar_url} />}
+            <AvatarFallback
+              className="text-[11px] font-semibold"
+              style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}
+            >
+              {getInitials(displayName)}
+            </AvatarFallback>
+          </Avatar>
+          <span
+            className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-[2.5px]"
+            style={{
+              background: statusColor[status] ?? statusColor.offline,
+              borderColor: 'var(--bg-secondary)',
+            }}
+          />
+        </div>
+
+        {/* Name + custom status */}
+        <div className="flex-1 min-w-0">
+          <p
+            className="truncate text-sm font-medium leading-tight"
+            style={{ color: isOffline ? 'var(--text-muted)' : nameColor }}
+          >
+            {displayName}
+          </p>
+          {member.user.custom_status && (
+            <p
+              className="truncate text-[11px] leading-tight mt-0.5"
+              style={{ color: 'var(--text-muted)' }}
+            >
+              {member.user.custom_status}
+            </p>
+          )}
+        </div>
+      </button>
+
+      {showProfile && (
+        <div className="absolute right-full top-0 mr-2 z-50">
+          <UserProfileCard
+            user={member.user}
+            onClose={() => setShowProfile(false)}
+          />
+        </div>
+      )}
     </div>
   );
 }

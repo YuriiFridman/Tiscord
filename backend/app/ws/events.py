@@ -68,3 +68,7 @@ class WSEvent:
 
     # Stage channels
     STAGE_UPDATE = "STAGE_UPDATE"
+
+    # Screen sharing
+    SCREEN_SHARE_START = "SCREEN_SHARE_START"
+    SCREEN_SHARE_STOP = "SCREEN_SHARE_STOP"
