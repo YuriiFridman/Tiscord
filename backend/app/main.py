@@ -2,9 +2,11 @@ import asyncio
 import os
 import uuid
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Query, WebSocket, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.websockets import WebSocketDisconnect
 from sqlalchemy import select
@@ -227,3 +229,24 @@ async def websocket_endpoint(websocket: WebSocket, token: str = Query(...)):
         manager.disconnect(conn)
         for guild_id in conn.guild_ids:
             await manager.broadcast_presence(guild_id, user_id, "offline")
+
+
+# ── Serve the bundled React frontend (only when the build artifact exists) ────
+# When the combined Docker image is used, the Vite output is copied to
+# <repo_root>/frontend_dist.  All API routes defined above take priority
+# because FastAPI routes are matched before this catch-all handler.
+_FRONTEND_DIST = Path(__file__).parent.parent / "frontend_dist"
+
+if _FRONTEND_DIST.is_dir():
+    # Expose static assets (JS, CSS, images) with their original paths.
+    _assets_dir = _FRONTEND_DIST / "assets"
+    if _assets_dir.is_dir():
+        app.mount("/assets", StaticFiles(directory=str(_assets_dir)), name="frontend-assets")
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def serve_frontend(full_path: str) -> FileResponse:
+        """Return the requested static file or fall back to index.html (SPA routing)."""
+        candidate = _FRONTEND_DIST / full_path
+        if candidate.is_file():
+            return FileResponse(str(candidate))
+        return FileResponse(str(_FRONTEND_DIST / "index.html"))
