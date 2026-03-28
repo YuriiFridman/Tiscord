@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Query, status
-from sqlalchemy import select
+from pydantic import BaseModel
+from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
 from app.deps import CurrentUser, DbDep
@@ -16,6 +17,14 @@ from app.ws.events import WSEvent
 from app.ws.manager import manager
 
 router = APIRouter(prefix="/channels", tags=["messages"])
+
+
+class BulkDeleteRequest(BaseModel):
+    message_ids: list[uuid.UUID]
+
+
+class ChannelStatsOut(BaseModel):
+    message_count: int
 
 
 @router.get("/{channel_id}/messages", response_model=list[MessageOut])
@@ -33,7 +42,27 @@ async def get_messages(
 
 @router.post("/{channel_id}/messages", response_model=MessageOut, status_code=status.HTTP_201_CREATED)
 async def create_message(channel_id: uuid.UUID, body: MessageCreate, db: DbDep, current_user: CurrentUser):
-    await get_channel_or_404(db, channel_id)
+    channel = await get_channel_or_404(db, channel_id)
+
+    # Enforce slowmode_delay
+    if channel.slowmode_delay > 0:
+        last_msg_result = await db.execute(
+            select(Message)
+            .where(Message.channel_id == channel_id, Message.author_id == current_user.id)
+            .order_by(Message.created_at.desc())
+            .limit(1)
+        )
+        last_msg = last_msg_result.scalar_one_or_none()
+        if last_msg is not None:
+            created = last_msg.created_at
+            if created.tzinfo is None:
+                created = created.replace(tzinfo=timezone.utc)
+            elapsed = (datetime.now(timezone.utc) - created).total_seconds()
+            if elapsed < channel.slowmode_delay:
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail=f"Slowmode active. Wait {channel.slowmode_delay - int(elapsed)} seconds.",
+                )
 
     msg = Message(channel_id=channel_id, author_id=current_user.id, content=body.content)
     if body.reply_to_id is not None:
@@ -218,3 +247,47 @@ async def search_messages(
         query = query.where(Message.created_at > after)
     result = await db.execute(query)
     return [MessageOut.model_validate(m) for m in result.scalars().all()]
+
+
+# ─── Bulk Delete ──────────────────────────────────────────────────────────────
+
+
+@router.post("/{channel_id}/messages/bulk-delete", status_code=status.HTTP_204_NO_CONTENT)
+async def bulk_delete_messages(
+    channel_id: uuid.UUID, body: BulkDeleteRequest, db: DbDep, current_user: CurrentUser
+):
+    if len(body.message_ids) == 0:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No message IDs provided")
+    if len(body.message_ids) > 100:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot bulk-delete more than 100 messages")
+
+    channel = await get_channel_or_404(db, channel_id)
+    result = await db.execute(
+        select(Message).where(Message.id.in_(body.message_ids), Message.channel_id == channel_id)
+    )
+    messages = result.scalars().all()
+    deleted_ids = []
+    for msg in messages:
+        deleted_ids.append(str(msg.id))
+        await db.delete(msg)
+    await db.commit()
+
+    if channel.guild_id and deleted_ids:
+        await manager.broadcast_to_guild(
+            channel.guild_id,
+            WSEvent.MESSAGE_DELETE,
+            {"channel_id": str(channel_id), "message_ids": deleted_ids},
+        )
+
+
+# ─── Channel Stats ───────────────────────────────────────────────────────────
+
+
+@router.get("/{channel_id}/stats", response_model=ChannelStatsOut)
+async def channel_stats(channel_id: uuid.UUID, db: DbDep, current_user: CurrentUser):
+    await get_channel_or_404(db, channel_id)
+    count_result = await db.execute(
+        select(func.count()).select_from(Message).where(Message.channel_id == channel_id)
+    )
+    message_count = count_result.scalar() or 0
+    return ChannelStatsOut(message_count=message_count)

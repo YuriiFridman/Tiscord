@@ -221,3 +221,23 @@ export interface UserNote {
   created_at: string;
   updated_at: string;
 }
+
+// ─── Read State ───────────────────────────────────────────────────────────────
+
+export interface ReadState {
+  user_id: string;
+  channel_id: string;
+  last_message_id: string;
+  updated_at: string;
+}
+
+// ─── Stats ────────────────────────────────────────────────────────────────────
+
+export interface GuildStats {
+  member_count: number;
+  online_count: number;
+}
+
+export interface ChannelStats {
+  message_count: number;
+}

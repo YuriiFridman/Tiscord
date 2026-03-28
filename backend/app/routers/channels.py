@@ -136,6 +136,12 @@ async def update_channel(guild_id: uuid.UUID, channel_id: uuid.UUID, body: Chann
         channel.topic = body.topic
     if body.is_nsfw is not None:
         channel.is_nsfw = body.is_nsfw
+    if body.slowmode_delay is not None:
+        channel.slowmode_delay = body.slowmode_delay
+    if body.bitrate is not None:
+        channel.bitrate = body.bitrate
+    if body.user_limit is not None:
+        channel.user_limit = body.user_limit
     await db.commit()
     await db.refresh(channel)
 

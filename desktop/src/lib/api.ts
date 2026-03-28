@@ -1,9 +1,11 @@
 import type {
   Channel,
   Category,
+  ChannelStats,
   DMThread,
   FriendRequest,
   Guild,
+  GuildStats,
   Invite,
   LoginRequest,
   Message,
@@ -11,6 +13,7 @@ import type {
   GuildMember,
   MemberRole,
   PermissionEntry,
+  ReadState,
   RegisterRequest,
   Role,
   RoleAuditLog,
@@ -154,6 +157,12 @@ export const authApi = {
     request<void>('/auth/logout', { method: 'POST', body: JSON.stringify({ refresh_token }) }),
 
   me: () => request<User>('/auth/me'),
+
+  changePassword: (current_password: string, new_password: string) =>
+    request<void>('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ current_password, new_password }),
+    }),
 };
 
 // ─── Users ────────────────────────────────────────────────────────────────────
@@ -179,6 +188,17 @@ export const guildsApi = {
   delete: (id: string) => request<void>(`/guilds/${id}`, { method: 'DELETE' }),
   leave: (id: string) => request<void>(`/guilds/${id}/members/me`, { method: 'DELETE' }),
   members: (id: string) => request<GuildMember[]>(`/guilds/${id}/members`),
+  stats: (id: string) => request<GuildStats>(`/guilds/${id}/stats`),
+  updateNickname: (guildId: string, nickname: string | null) =>
+    request<GuildMember>(`/guilds/${guildId}/members/me/nickname`, {
+      method: 'PATCH',
+      body: JSON.stringify({ nickname }),
+    }),
+  transferOwnership: (guildId: string, newOwnerId: string) =>
+    request<Guild>(`/guilds/${guildId}/transfer`, {
+      method: 'POST',
+      body: JSON.stringify({ new_owner_id: newOwnerId }),
+    }),
 };
 
 // ─── Channels & Categories ────────────────────────────────────────────────────
@@ -220,6 +240,11 @@ export const messagesApi = {
     }),
   delete: (channelId: string, messageId: string) =>
     request<void>(`/channels/${channelId}/messages/${messageId}`, { method: 'DELETE' }),
+  bulkDelete: (channelId: string, messageIds: string[]) =>
+    request<void>(`/channels/${channelId}/messages/bulk-delete`, {
+      method: 'POST',
+      body: JSON.stringify({ message_ids: messageIds }),
+    }),
   react: (channelId: string, messageId: string, emoji: string) =>
     request<void>(`/channels/${channelId}/messages/${messageId}/reactions/${encodeURIComponent(emoji)}`, {
       method: 'POST',
@@ -395,4 +420,21 @@ export const userNotesApi = {
   set: (userId: string, content: string) =>
     request<UserNote>(`/users/${userId}/notes`, { method: 'PUT', body: JSON.stringify({ content }) }),
   remove: (userId: string) => request<void>(`/users/${userId}/notes`, { method: 'DELETE' }),
+};
+
+// ─── Channel Stats ────────────────────────────────────────────────────────────
+
+export const channelStatsApi = {
+  get: (channelId: string) => request<ChannelStats>(`/channels/${channelId}/stats`),
+};
+
+// ─── Read State (Unread Tracking) ─────────────────────────────────────────────
+
+export const readStateApi = {
+  get: (channelId: string) => request<ReadState | null>(`/channels/${channelId}/ack`),
+  set: (channelId: string, lastMessageId: string) =>
+    request<ReadState>(`/channels/${channelId}/ack`, {
+      method: 'PUT',
+      body: JSON.stringify({ last_message_id: lastMessageId }),
+    }),
 };

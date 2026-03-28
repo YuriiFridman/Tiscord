@@ -3,7 +3,8 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, HTTPException, status
-from sqlalchemy import select
+from pydantic import BaseModel
+from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
 from app.deps import CurrentUser, DbDep
@@ -15,6 +16,19 @@ from app.ws.events import WSEvent
 from app.ws.manager import manager
 
 router = APIRouter(prefix="/guilds", tags=["guilds"])
+
+
+class NicknameUpdate(BaseModel):
+    nickname: str | None = None
+
+
+class GuildStatsOut(BaseModel):
+    member_count: int
+    online_count: int
+
+
+class TransferRequest(BaseModel):
+    new_owner_id: uuid.UUID
 
 
 @router.get("/", response_model=list[GuildOut])
@@ -87,3 +101,66 @@ async def leave_guild(guild_id: uuid.UUID, db: DbDep, current_user: CurrentUser)
     await manager.broadcast_to_guild(
         guild_id, WSEvent.GUILD_MEMBER_REMOVE, {"guild_id": str(guild_id), "user_id": str(current_user.id)}
     )
+
+
+# ─── Nickname ─────────────────────────────────────────────────────────────────
+
+
+@router.patch("/{guild_id}/members/me/nickname", response_model=GuildMemberOut)
+async def update_my_nickname(guild_id: uuid.UUID, body: NicknameUpdate, db: DbDep, current_user: CurrentUser):
+    member = await require_member(db, guild_id, current_user.id)
+    member.nickname = body.nickname
+    await db.commit()
+    result = await db.execute(
+        select(GuildMember)
+        .where(GuildMember.guild_id == guild_id, GuildMember.user_id == current_user.id)
+        .options(selectinload(GuildMember.user))
+    )
+    member = result.scalar_one()
+    payload = GuildMemberOut.model_validate(member).model_dump(mode="json")
+    await manager.broadcast_to_guild(guild_id, WSEvent.GUILD_MEMBER_UPDATE, payload)
+    return GuildMemberOut.model_validate(member)
+
+
+# ─── Guild Stats ──────────────────────────────────────────────────────────────
+
+
+@router.get("/{guild_id}/stats", response_model=GuildStatsOut)
+async def guild_stats(guild_id: uuid.UUID, db: DbDep, current_user: CurrentUser):
+    await require_member(db, guild_id, current_user.id)
+    count_result = await db.execute(
+        select(func.count()).select_from(GuildMember).where(GuildMember.guild_id == guild_id)
+    )
+    member_count = count_result.scalar() or 0
+
+    # Count online members via the WS manager
+    members_result = await db.execute(
+        select(GuildMember.user_id).where(GuildMember.guild_id == guild_id)
+    )
+    member_ids = members_result.scalars().all()
+    online_count = sum(1 for uid in member_ids if manager.is_online(uid))
+
+    return GuildStatsOut(member_count=member_count, online_count=online_count)
+
+
+# ─── Transfer Ownership ──────────────────────────────────────────────────────
+
+
+@router.post("/{guild_id}/transfer", response_model=GuildOut)
+async def transfer_ownership(guild_id: uuid.UUID, body: TransferRequest, db: DbDep, current_user: CurrentUser):
+    guild = await get_guild_or_404(db, guild_id)
+    if guild.owner_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the owner can transfer ownership")
+    if body.new_owner_id == current_user.id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Already the owner")
+
+    # Ensure new owner is a member
+    await require_member(db, guild_id, body.new_owner_id)
+
+    guild.owner_id = body.new_owner_id
+    await db.commit()
+    await db.refresh(guild)
+
+    payload = GuildOut.model_validate(guild).model_dump(mode="json")
+    await manager.broadcast_to_guild(guild_id, WSEvent.GUILD_UPDATE, payload)
+    return GuildOut.model_validate(guild)
