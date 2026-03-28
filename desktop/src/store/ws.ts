@@ -18,7 +18,17 @@ interface WSState {
   _dispatch: (event: WSEvent) => void;
 }
 
-const WS_URL = import.meta.env.VITE_WS_URL ?? 'ws://localhost:8000/ws';
+// When VITE_WS_URL is set (e.g. Tauri production build) use that absolute URL.
+// Otherwise derive the URL from the current page origin so the app works when
+// the backend serves the frontend from the same host.
+function resolveWsUrl(): string {
+  const configured = import.meta.env.VITE_WS_URL;
+  if (configured) return configured;
+  const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
+  return `${proto}://${window.location.host}/ws`;
+}
+
+const WS_URL = resolveWsUrl();
 const MAX_RECONNECT_DELAY = 30_000;
 
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;

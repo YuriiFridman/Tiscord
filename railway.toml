@@ -1,0 +1,13 @@
+[build]
+# Uses the root-level Dockerfile which builds both the React frontend and the
+# FastAPI backend into a single image.  The frontend is served as static files
+# by the backend at the same Railway URL, eliminating the need for a separate
+# frontend service and preventing the "Unexpected token '<'" JSON-parse error
+# that occurs when API calls are routed to an HTML-serving frontend service.
+builder = "dockerfile"
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 300
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3

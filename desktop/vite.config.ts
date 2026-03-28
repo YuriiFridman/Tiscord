@@ -13,6 +13,19 @@ export default defineConfig({
   server: {
     port: 1420,
     strictPort: true,
+    // Proxy API and WebSocket calls to the local backend during development.
+    // This lets the frontend use relative paths (/api/v1/…) even when the
+    // Vite dev-server runs on a different port than the FastAPI backend.
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/ws': {
+        target: 'ws://localhost:8000',
+        ws: true,
+      },
+    },
     watch: {
       // Tell vite to ignore watching `src-tauri`
       ignored: ['**/src-tauri/**'],

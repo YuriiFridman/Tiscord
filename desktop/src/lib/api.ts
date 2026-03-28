@@ -43,7 +43,11 @@ import type {
   UserConnectionInfo,
 } from '../types';
 
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000';
+// When VITE_API_URL is set (e.g. Tauri production build) use that absolute URL.
+// When not set, fall back to a relative path so the app works when the backend
+// serves the frontend from the same origin, or when the Vite dev-server proxy
+// forwards /api requests to localhost:8000.
+const API_URL = import.meta.env.VITE_API_URL ?? '';
 const PREFIX = `${API_URL}/api/v1`;
 
 // ─── Token storage ────────────────────────────────────────────────────────────
@@ -86,6 +90,21 @@ class ApiError extends Error {
   }
 }
 
+/**
+ * Guard against non-JSON success responses (e.g. an HTML error/maintenance page
+ * returned with a 2xx status).  Without this check, `res.json()` would throw a
+ * cryptic "Unexpected token '<'" SyntaxError that leaks directly into the UI.
+ */
+function assertJsonResponse(res: Response): void {
+  const contentType = res.headers.get('content-type') ?? '';
+  if (!contentType.includes('application/json')) {
+    throw new ApiError(
+      'Server returned an unexpected response. Please check your connection or try again later.',
+      res.status,
+    );
+  }
+}
+
 async function request<T>(
   path: string,
   options: RequestInit & { skipAuth?: boolean } = {},
@@ -122,6 +141,9 @@ async function request<T>(
   }
 
   if (res.status === 204) return undefined as T;
+
+  assertJsonResponse(res);
+
   return res.json() as Promise<T>;
 }
 
@@ -160,6 +182,7 @@ async function upload<T>(path: string, formData: FormData): Promise<T> {
     }
     throw new ApiError(detail, res.status);
   }
+  assertJsonResponse(res);
   return res.json() as Promise<T>;
 }
 
