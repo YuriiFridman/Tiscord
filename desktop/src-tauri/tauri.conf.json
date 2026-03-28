@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Nexora",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "identifier": "com.youryur4ik.nexora",
   "build": {
     "frontendDist": "../dist",
@@ -40,7 +40,7 @@
       "dialog": false,
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEY2OUUyNDM5QTczREUxQzQKUldURTRUMm5PU1NlOW9lWmhJNDE2YkQwbHRBanR3UU9QNEhVMlZmdFd6dkV2Qys2K1N0cGtHSDAK",
       "endpoints": [
-        "https://github.com/YuriiFridman/Tiscord/releases/latest/download/latest.json"
+        "https://github.com/YuriiFridman/Nexora/releases/latest/download/latest.json"
       ]
     }
   }
