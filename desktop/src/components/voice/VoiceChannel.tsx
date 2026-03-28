@@ -111,6 +111,15 @@ export default function VoiceChannel({ channelId, channelName }: Props) {
             </Button>
             <Button
               size="sm"
+              variant="ghost"
+              onClick={voice.toggleScreenShare}
+              style={{ color: voice.isScreenSharing ? 'var(--accent)' : 'var(--text-secondary)' }}
+              title={voice.isScreenSharing ? t('voice.stop_screen_share') : t('voice.start_screen_share')}
+            >
+              {voice.isScreenSharing ? '🖥️' : '📺'}
+            </Button>
+            <Button
+              size="sm"
               onClick={handleLeave}
               style={{ background: 'var(--danger)', color: '#fff', marginLeft: 'auto' }}
             >

@@ -171,12 +171,16 @@ async def websocket_endpoint(websocket: WebSocket, token: str = Query(...)):
         user_result = await db.execute(select(User).where(User.id == user_id))
         _user = user_result.scalar_one_or_none()
 
-    # Send READY event
+    # Send READY event with presence snapshot for all guilds
+    online_users = manager.get_online_users_for_guilds(conn.guild_ids, user_id)
+    presence_snapshot = [{"user_id": str(uid), "status": "online"} for uid in online_users]
+
     await conn.send({
         "event": WSEvent.READY,
         "data": {
             "user_id": str(user_id),
             "guild_ids": [str(g) for g in conn.guild_ids],
+            "presence": presence_snapshot,
         },
     })
 

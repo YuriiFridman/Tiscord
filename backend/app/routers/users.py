@@ -6,8 +6,10 @@ from fastapi import APIRouter, HTTPException, Query, status
 from sqlalchemy import select
 
 from app.deps import CurrentUser, DbDep
+from app.models.guild import GuildMember
 from app.models.user import User
 from app.schemas.user import UserOut, UserUpdateRequest
+from app.ws.manager import manager
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -29,6 +31,8 @@ async def get_user(user_id: uuid.UUID, db: DbDep, _: CurrentUser):
 
 @router.patch("/me", response_model=UserOut)
 async def update_me(body: UserUpdateRequest, db: DbDep, current_user: CurrentUser):
+    status_changed = body.status is not None and body.status != current_user.status
+
     if body.display_name is not None:
         current_user.display_name = body.display_name
     if body.avatar_url is not None:
@@ -41,4 +45,18 @@ async def update_me(body: UserUpdateRequest, db: DbDep, current_user: CurrentUse
         current_user.bio = body.bio
     await db.commit()
     await db.refresh(current_user)
+
+    # Broadcast PRESENCE_UPDATE to all guilds the user belongs to
+    if status_changed:
+        result = await db.execute(
+            select(GuildMember).where(GuildMember.user_id == current_user.id)
+        )
+        memberships = result.scalars().all()
+        for membership in memberships:
+            await manager.broadcast_presence(
+                membership.guild_id,
+                current_user.id,
+                current_user.status or "online",
+            )
+
     return UserOut.model_validate(current_user)

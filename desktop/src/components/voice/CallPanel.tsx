@@ -112,6 +112,15 @@ export default function CallPanel({ channelId, participants, maxParticipants = 6
             <Button size="sm" variant="ghost" onClick={voice.toggleDeafen} style={{ color: voice.isDeafened ? 'var(--danger)' : 'var(--text-secondary)' }}>
               {voice.isDeafened ? '🔕' : '🔊'}
             </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={voice.toggleScreenShare}
+              style={{ color: voice.isScreenSharing ? 'var(--accent)' : 'var(--text-secondary)' }}
+              title={voice.isScreenSharing ? t('voice.stop_screen_share') : t('voice.start_screen_share')}
+            >
+              {voice.isScreenSharing ? '🖥️' : '📺'}
+            </Button>
           </>
         )}
         <Button size="sm" onClick={handleEnd} style={{ background: 'var(--danger)', color: '#fff', marginLeft: 'auto' }}>
