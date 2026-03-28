@@ -16,6 +16,7 @@ import type {
   RoleAuditLog,
   TokenResponse,
   User,
+  UserNote,
   VoiceParticipant,
   Webhook,
 } from '../types';
@@ -385,4 +386,13 @@ export const notificationsApi = {
   getChannel: (channelId: string) => request<NotificationSetting>(`/channels/${channelId}/notification-settings`),
   updateChannel: (channelId: string, data: { level?: string; muted?: boolean }) =>
     request<NotificationSetting>(`/channels/${channelId}/notification-settings`, { method: 'PUT', body: JSON.stringify(data) }),
+};
+
+// ─── User Notes ───────────────────────────────────────────────────────────────
+
+export const userNotesApi = {
+  get: (userId: string) => request<UserNote | null>(`/users/${userId}/notes`),
+  set: (userId: string, content: string) =>
+    request<UserNote>(`/users/${userId}/notes`, { method: 'PUT', body: JSON.stringify({ content }) }),
+  remove: (userId: string) => request<void>(`/users/${userId}/notes`, { method: 'DELETE' }),
 };

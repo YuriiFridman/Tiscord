@@ -210,3 +210,14 @@ export interface VoiceState {
   isDeafened: boolean;
   participants: VoiceParticipant[];
 }
+
+// ─── User Notes ───────────────────────────────────────────────────────────────
+
+export interface UserNote {
+  id: string;
+  owner_id: string;
+  target_id: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+}

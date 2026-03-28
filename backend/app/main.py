@@ -27,6 +27,7 @@ from app.routers import (
     roles,
     social,
     totp,
+    user_notes,
     users,
     voice,
     webhooks,
@@ -134,6 +135,7 @@ app.include_router(social.router, prefix=API_PREFIX)
 app.include_router(webhooks.router, prefix=API_PREFIX)
 app.include_router(notifications.router, prefix=API_PREFIX)
 app.include_router(totp.router, prefix=API_PREFIX)
+app.include_router(user_notes.router, prefix=API_PREFIX)
 
 
 @app.get("/health")
