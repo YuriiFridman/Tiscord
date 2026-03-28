@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'  # Срабатывает при тегах v1.0.2, v1.1.0, и т.д.
+      - 'v*'
 
 jobs:
   release:
@@ -30,16 +30,6 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
-      - name: Install dependencies (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libwebkit2gtk-4.1-dev \
-            libssl-dev \
-            libayatana-appindicator3-dev \
-            librsvg2-dev
-
       - name: Install frontend deps
         working-directory: desktop
         run: npm install
@@ -50,6 +40,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_WS_URL: ${{ secrets.VITE_WS_URL }}
         with:
           projectPath: desktop
           tagName: ${{ github.ref_name }}
@@ -57,4 +49,4 @@ jobs:
           releaseBody: 'See CHANGELOG for details.'
           releaseDraft: false
           prerelease: false
-          includeUpdaterJson: true  # Автоматически создаёт latest.json!
+          includeUpdaterJson: true
